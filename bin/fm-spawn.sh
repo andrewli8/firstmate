@@ -306,6 +306,21 @@
 #   This is an exec environment boundary, not a sandbox for the pane's startup
 #   shell, credential files, same-user processes, or later shell initialization.
 #   See docs/configuration.md for provider/Git setup and supported limits.
+# Orca credential source (config/launch-env-tmux-session):
+#   Optional local file containing one exact tmux session name (letters, digits,
+#   underscores or hyphens). Only Orca uses it; other backends are unchanged.
+#   Before allocation, snapshot that session's local show-environment values,
+#   never tmux's server-global or the invoking process's environment. This opt-in
+#   requires tmux and that exact session to remain readable at each spawn.
+#   With an allowlist, select only its source names; without one, use every
+#   explicitly set session-local name. Unset/missing names stay unset. Launch
+#   with env -i plus the same operational floor and explicit assignments above,
+#   excluding unrelated destination credentials. Secret values are shell-quoted
+#   only in the existing owner-only staged launch file, never terminal input.
+#   No secret source file is created and this source selector is not inherited
+#   into secondmate homes. A malformed selector or unreadable source refuses
+#   before creating the Orca worktree or terminal. This is not a filesystem
+#   sandbox; project/harness sandbox settings still own credential-file denial.
 # Claude permission mode (config/claude-permission-mode):
 #   One token selecting the permission flag every claude launch (ship, scout,
 #   secondmate, and relaunch) carries. Absent or `bypass` keeps today's
@@ -1591,6 +1606,8 @@ if [ "$RELAUNCH" -eq 1 ]; then
     exit 1
   fi
 fi
+ORCA_LAUNCH_ENV_ENABLED=0
+ORCA_LAUNCH_ENV_ARGS=
 if [ "$RELAUNCH" -eq 0 ]; then
   mkdir -p "$STATE" || {
     echo "error: could not create parent state directory" >&2
@@ -1660,6 +1677,22 @@ if [ "$RELAUNCH" -eq 0 ]; then
   fi
   if [ "$BACKEND" = orca ]; then
     fm_backend_orca_runtime_check || exit 1
+    ORCA_LAUNCH_ENV_ENABLED=$(fm_config_source_present "$CONFIG/launch-env-tmux-session") || exit 1
+    if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+      if [ ! -f "$CONFIG/launch-env-tmux-session" ] || [ ! -r "$CONFIG/launch-env-tmux-session" ]; then
+        echo "error: config/launch-env-tmux-session must be a readable regular file" >&2
+        exit 1
+      fi
+      ORCA_LAUNCH_ENV_SESSION=$(cat "$CONFIG/launch-env-tmux-session") || exit 1
+      case "$ORCA_LAUNCH_ENV_SESSION" in
+        ''|*[!A-Za-z0-9_-]*)
+          echo "error: config/launch-env-tmux-session must contain one session name (letters, digits, underscores or hyphens)" >&2
+          exit 1
+          ;;
+      esac
+      ORCA_LAUNCH_ENV_ARGS=$(fm_backend_orca_launch_env_args \
+        "$ORCA_LAUNCH_ENV_SESSION" "$LAUNCH_ENV_ENABLED" "$LAUNCH_ENV_NAMES") || exit 1
+    fi
   fi
 fi
 SPAWN_TASK_LOCK="$STATE/.spawn-$ID.lock"
@@ -5259,8 +5292,12 @@ if [ -n "$SPAWN_TRACEPARENT" ]; then
     LAUNCH="unset TRACEPARENT; $LAUNCH"
   fi
 fi
-if [ "$LAUNCH_ENV_ENABLED" = 1 ]; then
+if [ "$LAUNCH_ENV_ENABLED" = 1 ] || [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
   LAUNCH_ENV_PREFIX='/usr/bin/env -i'
+  LAUNCH_ENV_FORWARD_NAMES=$LAUNCH_ENV_NAMES
+  # A configured source replaces credential inheritance from the destination;
+  # an allowed name missing at the source must not revive a personal pane value.
+  [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || LAUNCH_ENV_FORWARD_NAMES=
   # COMPACT_ADVISER_DISABLE is the intentional declarative floor-membership
   # entry; the explicit COMPACT_ADVISER_DISABLE=1 assignment below is the
   # authoritative setter.
@@ -5269,13 +5306,16 @@ if [ "$LAUNCH_ENV_ENABLED" = 1 ]; then
     HERDR_PANE_ID CMUX_WORKSPACE_ID CMUX_SURFACE_ID CMUX_TAB_ID CMUX_PANEL_ID \
     CMUX_SOCKET_PATH ZELLIJ ZELLIJ_SESSION_NAME ZELLIJ_PANE_ID FM_ZELLIJ_SESSION \
     FM_TASK_ID COMPACT_ADVISER_DISABLE LAVISH_AXI_HOST \
-    $LAUNCH_ENV_NAMES; do
+    $LAUNCH_ENV_FORWARD_NAMES; do
     # Only validated names enter shell syntax. Values expand once, quoted, in
     # the pane shell and never become source text or spawn-process snapshots.
     # shellcheck disable=SC2016
     printf -v env_arg '${%s+"%s=$%s"}' "$env_name" "$env_name" "$env_name"
     LAUNCH_ENV_PREFIX="$LAUNCH_ENV_PREFIX $env_arg"
   done
+  if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+    LAUNCH_ENV_PREFIX="$LAUNCH_ENV_PREFIX $ORCA_LAUNCH_ENV_ARGS"
+  fi
   # COMPACT_ADVISER_DISABLE is retained by the floor loop above, which forwards
   # whatever the pane export set, and then pinned here to the one value Firstmate
   # launches on. The literal assignment comes last deliberately: `env` applies

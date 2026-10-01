@@ -71,6 +71,13 @@ case "$1 $2" in
     exit 0
     ;;
   "terminal send")
+    if [ -n "${FM_TEST_ORCA_LOG:-}" ]; then
+      prev=
+      for a in "$@"; do
+        [ "$prev" != --text ] || printf '%s\n' "$a" >> "$FM_TEST_ORCA_LOG"
+        prev=$a
+      done
+    fi
     printf '{"ok":true}\n'
     exit 0
     ;;
@@ -164,6 +171,97 @@ EOF
   pass "a relaunch against an Orca-backed task is refused before the RELAUNCH+orca worktree carve-out could run"
 }
 
+# Source values are synthetic and deliberately include shell syntax and trailing
+# newlines. Removing the source overlay, ambient clearing, or quoting breaks
+# these executions of the real staged spawn command.
+test_orca_launch_uses_controlled_tmux_environment() {
+  local setting case_dir home id fb out status staged result expected value
+  for setting in absent enabled empty unavailable malformed nonregular; do
+    id="orca-env-$setting"
+    case_dir="$TMP_ROOT/$id"
+    home="$case_dir/home"
+    mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+    touch "$home/state/.last-watcher-beat"
+    printf 'manual\n' > "$home/config/backlog-backend"
+    printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+    if [ "$setting" = malformed ]; then printf 'wrong:selector\n' > "$home/config/launch-env-tmux-session"; fi
+    if [ "$setting" = nonregular ]; then rm "$home/config/launch-env-tmux-session"; mkdir "$home/config/launch-env-tmux-session"; fi
+    case "$setting" in
+      enabled) printf 'GH_TOKEN\nGH_CONFIG_DIR\nGIT_CONFIG_COUNT\nGIT_CONFIG_KEY_0\nGIT_CONFIG_VALUE_0\nGIT_CONFIG_KEY_1\nGIT_CONFIG_VALUE_1\nFM_TEST_NOT_SET\n' > "$home/config/launch-env-allowlist" ;;
+      empty) : > "$home/config/launch-env-allowlist" ;;
+    esac
+    fm_git_init_commit "$case_dir/project"
+    cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Verify the controlled Orca environment source.
+
+## Firstmate spec
+Execute read-only environment checks.
+EOF
+    cat > "$case_dir/probe.sh" <<'EOF'
+#!/bin/sh
+printf '%s\n' "${GH_TOKEN-unset}" "${GH_CONFIG_DIR-unset}" "${DATABASE_URL-unset}" "${FM_TEST_NOT_SET-unset}" "${FM_TEST_PERSONAL-unset}"
+GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git config --get-all credential.helper || :
+EOF
+    value="synthetic-' \$(touch $case_dir/injected) \`false\`"$'\nline\n\n'
+    VALUE="$value" python3 - "$case_dir/source.json" <<'PY'
+import json,os,sys
+with open(sys.argv[1], 'w') as f:
+ json.dump({'GH_TOKEN':os.environ['VALUE'], 'GH_CONFIG_DIR':'scoped-gh', 'DATABASE_URL':'readonly-db', 'GIT_CONFIG_COUNT':'2', 'GIT_CONFIG_KEY_0':'credential.helper', 'GIT_CONFIG_VALUE_0':'', 'GIT_CONFIG_KEY_1':'credential.helper', 'GIT_CONFIG_VALUE_1':'!gh auth git-credential', 'FM_TEST_NOT_SET':None}, f)
+PY
+    fb=$(make_orca_fakebin "$case_dir")
+    cat > "$fb/tmux" <<'EOF'
+#!/usr/bin/env python3
+import json,os,sys
+if os.environ.get('FM_TEST_SOURCE_UNAVAILABLE') == '1': sys.exit(1)
+if sys.argv[1:4] != ['show-environment','-t','=scoped-source']: sys.exit(2)
+with open(os.environ['FM_TEST_ORCA_DIR']+'/source.json') as f: data=json.load(f)
+names=[sys.argv[4]] if len(sys.argv)>4 else data
+for name in names:
+ if name not in data: sys.exit(1)
+ value=data[name]
+ print('-'+name if value is None else name+'='+value)
+EOF
+    chmod +x "$fb/tmux"
+    out=$(FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+      FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+      FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+      FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
+      FM_TEST_ORCA_LOG="$case_dir/terminal.log" \
+      FM_TEST_SOURCE_UNAVAILABLE="$([ "$setting" = unavailable ] && echo 1 || echo 0)" \
+      PATH="$fb:$PATH" "$SPAWN" "$id" "$case_dir/project" \
+      --mode direct-PR --yolo off --backend orca --harness "/bin/sh '$case_dir/probe.sh'" 2>&1)
+    status=$?
+    if [ "$setting" = unavailable ] || [ "$setting" = malformed ] || [ "$setting" = nonregular ]; then
+      expect_code 1 "$status" "unavailable source must refuse: $out"
+      [ ! -d "$case_dir/orca-worktrees" ] || fail "source refusal allocated a worktree"
+      [ ! -f "$home/state/$id.meta" ] || fail "source refusal published metadata"
+      pass "Orca refuses source=$setting before allocating resources"
+      continue
+    fi
+    expect_code 0 "$status" "controlled-source spawn should succeed: $out"
+    staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+    [ -f "$staged" ] || fail "Orca did not receive the staged launch path"
+    [ "$(stat -f '%Lp' "$staged" 2>/dev/null || stat -c '%a' "$staged")" = 600 ] || fail "credential launch file is not private"
+    assert_not_contains "$(cat "$case_dir/terminal.log")" synthetic "source values leaked into terminal input"
+    result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
+      GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh FM_TEST_PERSONAL=personal-value \
+      FM_TEST_NOT_SET=personal-value GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 \
+      /bin/sh -c ". '$staged'") || fail "controlled-source launch failed"
+    case "$setting" in
+      absent) expected="$value"$'\nscoped-gh\nreadonly-db\nunset\nunset\n\n!gh auth git-credential' ;;
+      enabled) expected="$value"$'\nscoped-gh\nunset\nunset\nunset\n\n!gh auth git-credential' ;;
+      empty) expected=$'unset\nunset\nunset\nunset\nunset' ;;
+    esac
+    [ "$result" = "$expected" ] || fail "Orca source/allowlist=$setting lost isolation or values"
+    [ ! -e "$case_dir/injected" ] || fail "source value executed shell syntax"
+    rm -f "$staged"
+    pass "Orca source/allowlist=$setting preserves controlled values, clears ambient credentials and keeps values off terminal input"
+  done
+}
+
+test_orca_launch_uses_controlled_tmux_environment
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run
 

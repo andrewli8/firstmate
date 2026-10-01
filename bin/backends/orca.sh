@@ -48,6 +48,53 @@ process.exit(1);
 '
 }
 
+# Snapshot only the explicitly selected tmux session's local environment, never
+# its server-global environment or the invoking process. The caller places these
+# quoted assignments in its private staged launch file, never terminal input.
+# An allowlist selects source names; absent/unset names have no ambient fallback.
+fm_backend_orca_launch_env_args() {  # <tmux-session> <allowlist-enabled> <names>
+  node - "$1" "$2" "$3" <<'JS'
+const { spawnSync } = require("child_process");
+const [session, enabled, names] = process.argv.slice(2);
+function refuse() {
+  // Do not echo tmux output or errors: they may contain credential values.
+  console.error("error: cannot snapshot configured tmux launch environment; refusing Orca launch");
+  process.exit(1);
+}
+function read(name) {
+  const args = ["show-environment", "-t", `=${session}`];
+  if (name !== undefined) args.push(name);
+  const result = spawnSync("tmux", args, {
+    encoding: "utf8", timeout: 10000, maxBuffer: 4 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) refuse();
+  return result.stdout;
+}
+const listed = new Set();
+for (const line of read().split("\n")) {
+  const match = /^(?:-([A-Za-z_][A-Za-z0-9_]*)$|([A-Za-z_][A-Za-z0-9_]*)=)/.exec(line);
+  if (match) listed.add(match[1] || match[2]);
+}
+const selected = enabled === "1" ? names.split("\n").filter(Boolean) : [...listed];
+const assignments = [];
+for (const name of new Set(selected)) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) refuse();
+  if (!listed.has(name)) continue;
+  // Read each name separately so embedded/trailing newlines are preserved and
+  // a value resembling another NAME=value line cannot supply another variable.
+  const output = read(name);
+  if (!output.endsWith("\n")) refuse();
+  const record = output.slice(0, -1);
+  if (record === `-${name}`) continue;
+  if (!record.startsWith(`${name}=`)) refuse();
+  const value = record.slice(name.length + 1);
+  if (value.includes("\0")) refuse();
+  assignments.push(`${name}='${value.replace(/'/g, "'\\''")}'`);
+}
+process.stdout.write(assignments.join(" "));
+JS
+}
+
 fm_backend_orca_json_get() {  # <field> ; fields: worktree-id worktree-path terminal-handle worktree-terminal-handle repo-id
   # Terminal handles are accepted only from verified terminal result shapes:
   # result.terminal or a root terminal object with .handle. Undocumented

@@ -947,8 +947,19 @@ Firstmate retains basic home, executable search, terminal, locale, temporary-dir
 Other ambient names must be listed explicitly, including custom credential-store locations, proxy settings, and certificate overrides when required by the selected tools.
 The command shell and worker may still create their own variables.
 
-Allowed values come from the destination pane at execution time; they are neither copied from the invoking Firstmate process nor written into the launch command.
+For ordinary filtering, allowed values come from the destination pane at execution time; they are neither copied from the invoking Firstmate process nor written into the launch command.
 Listing a name does not provision it in a daemon's environment or transfer credentials to another machine.
+
+### Orca environment source (config/launch-env-tmux-session)
+
+An Orca home can opt in to taking worker values from one explicitly configured tmux session instead of ambient Orca credentials.
+This bridges an existing scoped worker environment during migration, so that session and tmux remain dependencies for subsequent Orca launches.
+The existing allowlist selects source names when present; otherwise the source is the session's explicitly set local environment, with Firstmate's operational floor retained.
+Missing source values never fall back to the destination's credentials, and an unreadable source refuses before Orca allocates resources.
+Values travel in the existing private staged launch file, while terminal input carries only its path.
+The source selector stays local to this home and is not inherited by secondmates.
+[`fm-spawn.sh`](../bin/fm-spawn.sh)'s header owns the selector format, snapshot mechanics, and launch-file security contract.
+Project and harness sandbox settings still own filesystem access to personal credential stores.
 
 ### Authentication requirements
 

@@ -26,6 +26,10 @@ Open the Orca app to watch a task's terminal.
 Routine supervision uses the recorded endpoint through `bin/fm-peek.sh <id>` and `FM_HOME=<home> bin/fm-send.sh <id> '<text>'`.
 Enter and Ctrl-C are supported; Escape is not.
 
+When scoped worker credentials currently live in a tmux session, configure the [Orca environment source](configuration.md#orca-environment-source-configlaunch-env-tmux-session) before migrating those launches.
+An allowlist alone cannot provision values in an Orca terminal.
+The opt-in source excludes ambient destination credentials and retains the existing project/harness filesystem sandbox boundary.
+
 ## Task shape and metadata
 
 Each task has one Orca-managed git worktree and one Orca terminal.
@@ -81,6 +85,7 @@ Reinstall the CLI and rerun; [`verification/runtime-backends.md`](verification/r
 
 ```sh
 tests/fm-backend-orca.test.sh
+tests/fm-spawn-orca-worktree.test.sh
 tests/fm-backend.test.sh
 tests/fm-bootstrap.test.sh
 tests/fm-teardown-endpoint-safety.test.sh
