@@ -1869,6 +1869,34 @@ tests/fm-bootstrap.test.sh
 
 The fake-Orca suite covers readiness, registration, create response parsing, metadata routing, popup-safe submit, and path-matched release refusal.
 
+### Controlled worker environment, 2026-10-01
+
+Verified on macOS with Orca CLI 1.4.205 and Claude Code 2.1.286, using one scratch-home scout in a runtime-owned worktree with the project's committed Claude sandbox profile.
+The configured tmux session-local source supplied the scoped GitHub token/configuration, read-only database URL, Gemini key and Git credential helper entries.
+Eight private hash comparisons matched the source values exactly, and `gh-axi api /user --jq .login` authenticated successfully using the worker token.
+The sandbox denied opening the personal GitHub credential file and listing its parent directory, with zero credential-file bytes read.
+This filesystem denial came from the project sandbox, not the environment filter.
+Git preserved the helper reset and worker helper at indices 0 and 1, with Firstmate's hooks override appended at index 2.
+Claude's sandbox added four `safe.directory` entries afterward; those additions did not replace credentials or hooks.
+Guarded teardown removed the exact worktree, task metadata and private launch directory.
+The recorded terminal became disconnected and non-writable with no pane runtime; Orca retained its cached terminal metadata.
+
+The real sandbox proof preceded the requirement for an explicit source allowlist; the current source-selection and launch-file-consumption guarantees are covered by the regressions below.
+The portable refresh commands exercise the staged launch under synthetic ambient personal credentials, required and empty allowlists, quoting, trailing newlines, deletion before worker execution, and pre-allocation refusals.
+They source the real staged file through sh, Bash and installed zsh, and check invalid Git counts leave interactive panes alive with visible errors.
+
+An isolated real-tmux regression on tmux 3.6a also preserves synthetic multiline UTF-8 values under absent and C locales across sh, Bash and installed zsh.
+Each snapshot read forces tmux's UTF-8 mode because the default non-UTF-8 client output silently sanitizes these values.
+The real-tmux regression also rejects missing names even when a server-global or multiline continuation value resembles a source entry, preserves deliberate unset records, and excludes an automatically supplied synthetic SSH agent.
+
+```sh
+bash bin/fm-test-run.sh tests/fm-spawn-orca-worktree.test.sh tests/fm-spawn-dispatch-profile.test.sh
+bash bin/fm-test-run.sh tests/fm-backend-orca.test.sh tests/fm-kimi-harness.test.sh
+```
+
+Refresh the real sandbox proof after Orca or Claude upgrades using an explicitly authorized scratch-home scout and the launch contract in `fm-spawn.sh`'s header.
+Capture only comparison results, authenticate inside sandboxed Bash, and verify exact resource removal through guarded teardown.
+
 ## cmux
 
 The current compatibility floor is cmux 0.64, and the active live evidence uses 0.64.17 build 97 on macOS aarch64.

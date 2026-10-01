@@ -947,8 +947,20 @@ Firstmate retains basic home, executable search, terminal, locale, temporary-dir
 Other ambient names must be listed explicitly, including custom credential-store locations, proxy settings, and certificate overrides when required by the selected tools.
 The command shell and worker may still create their own variables.
 
-Allowed values come from the destination pane at execution time; they are neither copied from the invoking Firstmate process nor written into the launch command.
+For ordinary filtering, allowed values come from the destination pane at execution time; they are neither copied from the invoking Firstmate process nor written into the launch command.
 Listing a name does not provision it in a daemon's environment or transfer credentials to another machine.
+
+### Orca environment source (config/launch-env-tmux-session)
+
+An Orca home can opt in to taking worker values from one explicitly configured tmux session instead of ambient Orca credentials.
+This bridges an existing scoped worker environment during migration, so that session and tmux remain dependencies for subsequent Orca launches.
+The source requires an explicit allowlist so tmux's automatic session values cannot silently grant access to a personal SSH agent.
+Missing allowlisted source names refuse before Orca allocates resources; explicit unset records remain deliberate unsets.
+Source mode disables system Git configuration, while project and harness settings still own credential-file access.
+Values travel in the existing private staged launch file, while terminal input carries only its path; the pane removes the file as sourcing starts, before executing the worker.
+The source selector stays local to this home and is not inherited by secondmates.
+[`fm-spawn.sh`](../bin/fm-spawn.sh)'s header owns the selector format, snapshot mechanics, and launch-file security contract.
+Project and harness sandbox settings still own filesystem access to personal credential stores.
 
 ### Authentication requirements
 
@@ -967,6 +979,7 @@ Choose the minimum additions for the authentication method actually in use:
 ### Validation and security limits
 
 Verify the selected provider login and Git transport after opting in; Firstmate does not infer credentials from model names or install a secret manager.
+When forwarding `GIT_CONFIG_COUNT`, include every `GIT_CONFIG_KEY_n` and `GIT_CONFIG_VALUE_n` for that count together; a partial set makes Git refuse its configuration.
 Raw launch commands run under noninteractive POSIX `sh` with this option and must use compatible syntax.
 
 The filter runs at the worker command boundary, after the terminal daemon and pane shell have started; it does not scrub either of those processes.
