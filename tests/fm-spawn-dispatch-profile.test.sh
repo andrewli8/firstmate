@@ -504,15 +504,31 @@ test_launch_preserves_inherited_git_config() {
       assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive $pane_shell pane"
     done
   done
-  # A fish pane sources the same launch file. Without fish on this host, check
-  # the emitted launch prefix (the staged launch-file contract) for POSIX-only
-  # syntax fish cannot parse.
+  # A fish pane sources the same launch file, so fish runs the same append and
+  # refusal cases. CI installs fish and must not fall back. Without fish on a
+  # local host, check the emitted launch prefix (the staged launch-file
+  # contract) for POSIX-only syntax fish cannot parse.
   if command -v fish >/dev/null 2>&1; then
-    result=$(isolated_pane_env GIT_CONFIG_COUNT=2 \
-      GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
-      GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
-      fish -c "source '$launch_file'") || fail "Git configuration launch failed in fish"
-    [ "$result" = "$expected" ] || fail "launch dropped the inherited credential-helper entries in fish"
+    for count in 2 02; do
+      result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" \
+        GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
+        GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+        fish -c "source '$launch_file'") || fail "Git configuration launch failed in fish"
+      [ "$result" = "$expected" ] || fail "launch dropped the inherited credential-helper entries in fish"
+    done
+    result=$(isolated_pane_env GIT_CONFIG_COUNT=bad fish -c "source '$launch_file'" 2>&1)
+    status=$?
+    [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched in fish"
+    for count in bad 2147483647; do
+      result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" fish -i -c \
+        "source '$launch_file'; and exit 2; printf '\nSHELL-STILL-ALIVE\n'" 2>&1)
+      status=$?
+      expect_code 0 "$status" "invalid count must preserve the interactive fish pane"
+      assert_contains "$result" 'error: ' "count refusal must remain visible in fish"
+      assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive fish pane"
+    done
+  elif [ "${CI:-}" = true ]; then
+    fail "fish is required in CI to execute the fish pane launch"
   else
     prefix=$(fm_test_launch_git_prefix "$launch")
     # shellcheck disable=SC2016 # These are literal shell tokens fish rejects.
