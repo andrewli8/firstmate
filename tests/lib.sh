@@ -84,6 +84,20 @@ pass() {
   printf 'ok - %s\n' "$1"
 }
 
+# Harness argument assertions reuse the emitted prefix rather than duplicating
+# its shell implementation. The dispatch suite executes it separately to prove
+# credential preservation, hooks-path selection and invalid-count refusal.
+fm_test_launch_git_prefix() {  # <launch>
+  local fragment=$1
+  case "$fragment" in
+    *'fm_git_count='*'unset fm_git_count; '*) ;;
+    *) fail "launch has no complete Git configuration prefix" ;;
+  esac
+  fragment=${fragment#*fm_git_count=}
+  fragment=${fragment%%unset fm_git_count; *}
+  printf 'fm_git_count=%sunset fm_git_count; ' "$fragment"
+}
+
 # --- self-cleaning temp root ------------------------------------------------
 #
 # fm_test_tmproot <prefix> echoes a fresh temp dir and registers it for removal

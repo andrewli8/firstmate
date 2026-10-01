@@ -93,11 +93,6 @@ task_inbox_export() {  # <home> <id>
   printf "export FM_TASK_INBOX='%s'; " "$state/$2.inbox"
 }
 
-ai_trailer_hooks_prefix() {  # <home> <id>
-  local state
-  state=$(CDPATH='' cd -- "$1/state" && pwd -P) || fail "cannot resolve state dir $1/state"
-  printf "export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0='%s'; " "$state/$2.git-hooks"
-}
 
 run_spawn() {
   local home=$1 wt=$2 fakebin=$3 launchlog=$4
@@ -465,6 +460,46 @@ test_active_dispatch_profile_allows_positional_harness() {
   pass "active crew-dispatch profile allows the legacy positional harness form"
 }
 
+# Replacing inherited config rather than appending the hooks entry loses the
+# scoped HTTPS credential helper. Execute the real emitted launch and ask Git,
+# rather than inspecting command text, to catch that credential widening.
+test_launch_preserves_inherited_git_config() {
+  local rec id=git-config-append out status launch result pane_shell count launch_file
+  rec=$(make_spawn_case "$id" codex "$id")
+  read_case_record "$rec"
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" \
+    "$id" "$PROJ_DIR" --harness 'git config --get-all credential.helper; git config --get core.hooksPath')
+  status=$?
+  expect_code 0 "$status" "Git configuration probe should spawn: $out"
+  launch=$(cat "$LAUNCH_LOG")
+  launch_file="$CASE_DIR/git-config-launch.sh"
+  printf '%s\n' "$launch" > "$launch_file"
+  for pane_shell in /bin/sh /bin/bash /bin/zsh; do
+    [ -x "$pane_shell" ] || continue
+    for count in 2 02; do
+      result=$(GIT_CONFIG_COUNT="$count" \
+        GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
+        GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+        "$pane_shell" -c "$launch") || fail "Git configuration launch failed in $pane_shell"
+      [ "$result" = $'\n!gh auth git-credential\n'"$(cd "$HOME_DIR/state" && pwd -P)/$id.git-hooks" ] \
+        || fail "launch dropped the inherited credential-helper entries in $pane_shell"
+    done
+    result=$(GIT_CONFIG_COUNT=bad "$pane_shell" -c "$launch" 2>&1)
+    status=$?
+    [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched"
+    for count in bad 2147483647; do
+      # shellcheck disable=SC2016 # The child pane expands its own arguments and source status.
+      result=$(GIT_CONFIG_COUNT="$count" "$pane_shell" -i -c \
+        '. "$1"; fm_status=$?; [ "$fm_status" -ne 0 ] || exit 2; printf "\nSHELL-STILL-ALIVE\n"' _ "$launch_file" 2>&1)
+      status=$?
+      expect_code 0 "$status" "invalid count must preserve the interactive $pane_shell pane"
+      assert_contains "$result" 'error: ' "count refusal must remain visible in $pane_shell"
+      assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive $pane_shell pane"
+    done
+  done
+  pass "launch appends the hooks config while preserving inherited Git credentials in sh, bash and zsh"
+}
+
 test_active_dispatch_profile_allows_raw_launch_command() {
   local rec id out status launch
   id=profile-raw-z15
@@ -482,7 +517,7 @@ test_active_dispatch_profile_allows_raw_launch_command() {
   # The unverified-adapter escape hatch is still an agent this fleet launched,
   # so it carries the compact-adviser floor and the AI-trailer strip; nothing
   # else may rewrite the captain's own command.
-  [ "$launch" = "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$HOME_DIR" "$id")$(ai_trailer_hooks_prefix "$HOME_DIR" "$id")custom-agent --flag" ] || fail "raw launch command changed"$'\n'"actual: $launch"
+  [ "$launch" = "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$HOME_DIR" "$id")$(fm_test_launch_git_prefix "$launch")custom-agent --flag" ] || fail "raw launch command changed"$'\n'"actual: $launch"
   pass "active crew-dispatch profile allows the raw launch-command escape hatch"
 }
 
@@ -1644,6 +1679,7 @@ SH
 # permission flag, and any other token refuses before endpoint or metadata.
 claude_settings_json_arg() {  # <launch>
   local command=$1
+  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
@@ -1661,11 +1697,12 @@ claude_settings_json_arg() {  # <launch>
 
 claude_launch_brief_arg() {  # <launch>
   local command=$1
+  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
   (
-    eval "set -- ${command#*; }"
+    eval "set -- $command"
     eval "printf '%s' \"\${$#}\""
   )
 }
@@ -1688,7 +1725,7 @@ claude_expected_launch() {  # <launch> <home> <id> <permission-flag>
   [ "$(printf '%s' "$doorbell" | "$ROOT/bin/fm-operational-input.sh" doorbell-kind)" = launch-brief ] \
     || doorbell="not a launch-brief doorbell"
   quoted="'$(printf '%s' "$doorbell" | sed "s/'/'\\\\''/g")'"
-  printf '%s' "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$2" "$3")$(ai_trailer_hooks_prefix "$2" "$3")env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude $4 $(claude_worker_add_dirs "$2" "$3")--settings '{\"feedbackDrafts\":\"off\",\"attribution\":{\"commit\":\"\",\"pr\":\"\",\"sessionUrl\":false}}' $CLAUDE_CONTROL_CHANNEL_FLAG $quoted"
+  printf '%s' "export COMPACT_ADVISER_DISABLE=1; $(task_inbox_export "$2" "$3")$(fm_test_launch_git_prefix "$1")env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false CLAUDE_CODE_SEND_FEEDBACK=0 claude $4 $(claude_worker_add_dirs "$2" "$3")--settings '{\"feedbackDrafts\":\"off\",\"attribution\":{\"commit\":\"\",\"pr\":\"\",\"sessionUrl\":false}}' $CLAUDE_CONTROL_CHANNEL_FLAG $quoted"
 }
 
 test_claude_permission_mode_bypass_matches_absent_launch() {
@@ -1815,6 +1852,7 @@ test_non_claude_harness_ignores_claude_permission_mode() {
   pass "config/claude-permission-mode changes claude launches only"
 }
 
+test_launch_preserves_inherited_git_config
 test_worker_launch_delivers_role_scope
 test_no_profile_keeps_claude_profile_defaults
 test_claude_launch_brief_publishes_record_doorbell

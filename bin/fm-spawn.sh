@@ -426,7 +426,7 @@
 # with this repo, defaults back to on when unset, and only feeds the CLI's
 # request to the server, so it suppresses the trailer rather than preventing
 # it). Unless config/keep-ai-trailers is present, every spawn installs
-# state/<id>.git-hooks as a GIT_CONFIG core.hooksPath for the pane, so git
+# state/<id>.git-hooks as an appended GIT_CONFIG core.hooksPath entry for the pane, so git
 # commit-msg strips known AI trailers at the commit object for every launched
 # runtime, Claude included as defense in depth. bin/fm-git-strip-ai-trailers.sh
 # owns the identities, the hook install, and chaining the repository git is
@@ -5150,8 +5150,18 @@ fi
 # to keeping trailers, leave core.hooksPath alone so the repository's hooks run
 # directly. An export statement inside the pane command carries the override
 # across every step of a compound raw launch while firstmate's own git is unchanged.
+# A bad inherited count returns from the sourced launch file before the worker
+# runs, preserving the interactive pane and its visible error for inspection.
 if [ "$KEEP_AI_TRAILERS" = 0 ]; then
-  LAUNCH="export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=$(shell_quote "$GIT_HOOKS_DIR"); $LAUNCH"
+  # Resolve the index in the destination shell, after any launch environment
+  # filtering. Never replace credential.helper or other inherited entries.
+  # Validate and normalize decimal counts before shell arithmetic (02 is valid
+  # for Git too); reserve room in Git's signed-int count for our one new entry.
+  # shellcheck disable=SC2016
+  GIT_CONFIG_APPEND='fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; return 1 2>/dev/null || exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; return 1 2>/dev/null || exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'
+  # shellcheck disable=SC2016
+  GIT_CONFIG_APPEND="$GIT_CONFIG_APPEND$(shell_quote "$GIT_HOOKS_DIR")"' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; '
+  LAUNCH="$GIT_CONFIG_APPEND$LAUNCH"
 fi
 # Every agent this fleet launches - crewmate, scout, and secondmate, on a fresh
 # spawn and on a relaunch alike - runs with the compact-adviser kill switch on.
