@@ -199,6 +199,34 @@ test_a_named_owner_that_is_gone_ends_the_command() {
   pass "fm_exec_timed ends the command when its named owner is already gone"
 }
 
+# Stock macOS /bin/bash is 3.2, which has no BASHPID, and an unbound read
+# under set -u aborted fm_exec_timed before the watchdog started. Run the call
+# both as the script's last command, where the replaced shell's parent becomes
+# the owner, and from a subshell, under the perl-only PATH so the fallback
+# cannot lean on the caller's PATH.
+test_runs_under_system_bash_with_nounset() {
+  local frame out rc
+  if [ ! -x /bin/bash ]; then
+    pass "fm_exec_timed under /bin/bash with set -u (skipped: no /bin/bash)"
+    return
+  fi
+  for frame in top subshell; do
+    rc=0
+    out=$(PATH=$PERL_ONLY /bin/bash -c '
+      set -u
+      . "$1/bin/fm-timeout-lib.sh"
+      if [ "$2" = top ]; then
+        fm_exec_timed 5 1 bash -c "echo ran"
+      else
+        ( fm_exec_timed 5 1 bash -c "echo ran" )
+      fi
+    ' _ "$ROOT" "$frame" 2>&1) || rc=$?
+    [ "$rc" -eq 0 ] || fail "fm_exec_timed failed under /bin/bash set -u from the $frame frame (rc=$rc): $out"
+    [ "$out" = ran ] || fail "fm_exec_timed under /bin/bash set -u from the $frame frame printed: $out"
+  done
+  pass "fm_exec_timed runs under /bin/bash $(/bin/bash -c 'echo "$BASH_VERSION"') with set -u"
+}
+
 # With no named owner the calling script is captured before the watchdog
 # starts, so a script that dies while its subshell is still on the way into
 # fm_exec_timed - the watchdog then starts already reparented - is still
@@ -337,6 +365,7 @@ test_a_descendant_holding_the_output_cannot_outlast_the_bound
 test_a_signal_to_the_bounding_process_reaches_the_command
 test_a_named_owner_that_is_gone_ends_the_command
 test_an_owner_that_dies_during_startup_ends_the_command
+test_runs_under_system_bash_with_nounset
 test_perl_is_preferred_over_timeout
 test_refuses_rather_than_running_unbounded
 test_rejects_malformed_bounds_before_running_anything
