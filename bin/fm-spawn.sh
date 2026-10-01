@@ -312,11 +312,17 @@
 #   Before allocation, snapshot that session's local show-environment values,
 #   never tmux's server-global or the invoking process's environment. This opt-in
 #   requires tmux and that exact session to remain readable at each spawn.
-#   With an allowlist, select only its source names; without one, use every
-#   explicitly set session-local name. Unset/missing names stay unset. Launch
+#   Requires config/launch-env-allowlist and selects only its source names;
+#   missing names refuse, while explicit -NAME records deliberately unset them.
+#   This excludes tmux's automatic update-environment names unless allowlisted.
+#   Force UTF-8 client output to preserve source values under absent/C locales.
+#   Set GIT_CONFIG_NOSYSTEM=1 so system helpers cannot supply personal credentials.
+#   Forward GIT_CONFIG_COUNT and every indexed KEY/VALUE together. Launch
 #   with env -i plus the same operational floor and explicit assignments above,
 #   excluding unrelated destination credentials. Secret values are shell-quoted
 #   only in the existing owner-only staged launch file, never terminal input.
+#   The pane deletes that file as sourcing starts, before the worker executes;
+#   a deletion failure refuses the launch and preserves the interactive shell.
 #   No secret source file is created and this source selector is not inherited
 #   into secondmate homes. A malformed selector or unreadable source refuses
 #   before creating the Orca worktree or terminal. This is not a filesystem
@@ -1679,6 +1685,10 @@ if [ "$RELAUNCH" -eq 0 ]; then
     fm_backend_orca_runtime_check || exit 1
     ORCA_LAUNCH_ENV_ENABLED=$(fm_config_source_present "$CONFIG/launch-env-tmux-session") || exit 1
     if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+      if [ "$LAUNCH_ENV_ENABLED" != 1 ]; then
+        echo "error: config/launch-env-tmux-session requires config/launch-env-allowlist; refusing Orca launch" >&2
+        exit 1
+      fi
       if [ ! -f "$CONFIG/launch-env-tmux-session" ] || [ ! -r "$CONFIG/launch-env-tmux-session" ]; then
         echo "error: config/launch-env-tmux-session must be a readable regular file" >&2
         exit 1
@@ -5183,13 +5193,15 @@ fi
 # to keeping trailers, leave core.hooksPath alone so the repository's hooks run
 # directly. An export statement inside the pane command carries the override
 # across every step of a compound raw launch while firstmate's own git is unchanged.
+# A bad inherited count returns from the sourced launch file before the worker
+# runs, preserving the interactive pane and its visible error for inspection.
 if [ "$KEEP_AI_TRAILERS" = 0 ]; then
   # Resolve the index in the destination shell, after any launch environment
   # filtering. Never replace credential.helper or other inherited entries.
   # Validate and normalize decimal counts before shell arithmetic (02 is valid
   # for Git too); reserve room in Git's signed-int count for our one new entry.
   # shellcheck disable=SC2016
-  GIT_CONFIG_APPEND='fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'
+  GIT_CONFIG_APPEND='fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; return 1 2>/dev/null || exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; return 1 2>/dev/null || exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'
   # shellcheck disable=SC2016
   GIT_CONFIG_APPEND="$GIT_CONFIG_APPEND$(shell_quote "$GIT_HOOKS_DIR")"' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; '
   LAUNCH="$GIT_CONFIG_APPEND$LAUNCH"
@@ -5314,7 +5326,7 @@ if [ "$LAUNCH_ENV_ENABLED" = 1 ] || [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
     LAUNCH_ENV_PREFIX="$LAUNCH_ENV_PREFIX $env_arg"
   done
   if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
-    LAUNCH_ENV_PREFIX="$LAUNCH_ENV_PREFIX $ORCA_LAUNCH_ENV_ARGS"
+    LAUNCH_ENV_PREFIX="$LAUNCH_ENV_PREFIX $ORCA_LAUNCH_ENV_ARGS GIT_CONFIG_NOSYSTEM=1"
   fi
   # COMPACT_ADVISER_DISABLE is retained by the floor loop above, which forwards
   # whatever the pane export set, and then pinned here to the one value Firstmate
@@ -5369,6 +5381,11 @@ if ! (umask 077 && mkdir "$LAUNCH_DIR") 2>/dev/null; then
 fi
 LAUNCH_FILE="$LAUNCH_DIR/launch.$SPAWN_GEN.sh"
 LAUNCH_STAGE="$LAUNCH_DIR/.launch.$SPAWN_GEN.tmp"
+if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+  # The sourcing shell already holds the open file; unlink the credentials
+  # before launching the worker, including on a later command failure.
+  LAUNCH="rm -f -- $(shell_quote "$LAUNCH_FILE") || { echo 'error: cannot remove private launch file; refusing worker launch' >&2; return 1 2>/dev/null || exit 1; }; $LAUNCH"
+fi
 if [ -e "$LAUNCH_FILE" ] || [ -L "$LAUNCH_FILE" ]; then
   echo "error: task launch file $LAUNCH_FILE already exists; refusing to replace it" >&2
   exit 1

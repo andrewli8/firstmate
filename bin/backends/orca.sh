@@ -56,30 +56,30 @@ fm_backend_orca_launch_env_args() {  # <tmux-session> <allowlist-enabled> <names
   node - "$1" "$2" "$3" <<'JS'
 const { spawnSync } = require("child_process");
 const [session, enabled, names] = process.argv.slice(2);
-function refuse() {
+function refuse(name) {
   // Do not echo tmux output or errors: they may contain credential values.
-  console.error("error: cannot snapshot configured tmux launch environment; refusing Orca launch");
+  const required = name === undefined ? "" : ` (required name ${name})`;
+  console.error(`error: cannot snapshot configured tmux launch environment${required}; refusing Orca launch`);
   process.exit(1);
 }
 function read(name) {
-  const args = ["show-environment", "-t", `=${session}`];
+  // Without -u, tmux sanitizes values when the client lacks a UTF-8 locale.
+  const args = ["-u", "show-environment", "-t", `=${session}`];
   if (name !== undefined) args.push(name);
   const result = spawnSync("tmux", args, {
     encoding: "utf8", timeout: 10000, maxBuffer: 4 * 1024 * 1024,
   });
-  if (result.error || result.status !== 0) refuse();
+  if (result.error || result.status !== 0) refuse(name);
   return result.stdout;
 }
-const listed = new Set();
-for (const line of read().split("\n")) {
-  const match = /^(?:-([A-Za-z_][A-Za-z0-9_]*)$|([A-Za-z_][A-Za-z0-9_]*)=)/.exec(line);
-  if (match) listed.add(match[1] || match[2]);
-}
-const selected = enabled === "1" ? names.split("\n").filter(Boolean) : [...listed];
+if (enabled !== "1") refuse();
+// Verify the session even for an empty allowlist. Do not derive names from
+// raw multiline values or tmux's automatically populated update-environment.
+read();
+const selected = names.split("\n").filter(Boolean);
 const assignments = [];
 for (const name of new Set(selected)) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) refuse();
-  if (!listed.has(name)) continue;
   // Read each name separately so embedded/trailing newlines are preserved and
   // a value resembling another NAME=value line cannot supply another variable.
   const output = read(name);

@@ -1881,7 +1881,13 @@ Claude's sandbox added four `safe.directory` entries afterward; those additions 
 Guarded teardown removed the exact worktree, task metadata and private launch directory.
 The recorded terminal became disconnected and non-writable with no pane runtime; Orca retained its cached terminal metadata.
 
-The portable refresh commands exercise the staged launch under synthetic ambient personal credentials, source/allowlist combinations, quoting, trailing newlines and pre-allocation refusals:
+The real sandbox proof preceded the requirement for an explicit source allowlist; the current source-selection and launch-file-consumption guarantees are covered by the regressions below.
+The portable refresh commands exercise the staged launch under synthetic ambient personal credentials, required and empty allowlists, quoting, trailing newlines, deletion before worker execution, and pre-allocation refusals.
+They source the real staged file through sh, Bash and installed zsh, and check invalid Git counts leave interactive panes alive with visible errors.
+
+An isolated real-tmux regression on tmux 3.6a also preserves synthetic multiline UTF-8 values under absent and C locales across sh, Bash and installed zsh.
+Each snapshot read forces tmux's UTF-8 mode because the default non-UTF-8 client output silently sanitizes these values.
+The real-tmux regression also rejects missing names even when a server-global or multiline continuation value resembles a source entry, preserves deliberate unset records, and excludes an automatically supplied synthetic SSH agent.
 
 ```sh
 bash bin/fm-test-run.sh tests/fm-spawn-orca-worktree.test.sh tests/fm-spawn-dispatch-profile.test.sh
