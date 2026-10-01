@@ -1,0 +1,20 @@
+$ # pane inherits: GIT_CONFIG_COUNT=2 credential.helper="" credential.helper="!gh auth git-credential"
+$ cat git-config.sh   (written by env-file, sourced by pane)
+export GIT_CONFIG_KEY_2=core.hooksPath GIT_CONFIG_VALUE_2='/private/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.s27g08tMBh/hooks' GIT_CONFIG_COUNT=3
+$ sh -c "<launch prefix>; worker commands"
+[worker] credential.helper:
+  -> "osxkeychain"
+  -> ""
+  -> "!gh auth git-credential"
+[worker] core.hooksPath: /private/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.s27g08tMBh/hooks
+[repo pre-commit hook] credential.helper entries:
+  -> "osxkeychain"
+  -> ""
+  -> "!gh auth git-credential"
+[repo pre-commit hook] core.hooksPath: ''
+[worker] commit message (Cursor trailer stripped):
+feat: x
+
+$ GIT_CONFIG_COUNT=bad zsh -i (sourcing launch file)
+error: invalid inherited GIT_CONFIG_COUNT
+source status=1 ; interactive shell still alive
