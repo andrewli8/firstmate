@@ -208,6 +208,14 @@ jobs:
             exit 1
           }
           tmux -V
+      # Spawn tests source the staged pane launch under fish as well; under
+      # CI they refuse to fall back to a static syntax check without it.
+      - name: Install fish for pane-shell launch coverage
+        run: |
+          set -eu
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fish
+          fish --version
       - name: Install tasks-axi for backlog-handoff delegation
         run: |
           set -eu
