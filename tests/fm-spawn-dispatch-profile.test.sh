@@ -96,7 +96,11 @@ task_inbox_export() {  # <home> <id>
 ai_trailer_hooks_prefix() {  # <home> <id>
   local state
   state=$(CDPATH='' cd -- "$1/state" && pwd -P) || fail "cannot resolve state dir $1/state"
-  printf "export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0='%s'; " "$state/$2.git-hooks"
+  # shellcheck disable=SC2016
+  printf '%s' 'fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'
+  printf "'%s'" "$state/$2.git-hooks"
+  # shellcheck disable=SC2016
+  printf '%s' ' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; '
 }
 
 run_spawn() {
@@ -463,6 +467,35 @@ test_active_dispatch_profile_allows_positional_harness() {
   assert_contains "$out" "spawned $id harness=codex" "spawn did not report positional codex harness"
   assert_meta_profile "$HOME_DIR/state/$id.meta" codex gpt-5 high
   pass "active crew-dispatch profile allows the legacy positional harness form"
+}
+
+# Replacing inherited config rather than appending the hooks entry loses the
+# scoped HTTPS credential helper. Execute the real emitted launch and ask Git,
+# rather than inspecting command text, to catch that credential widening.
+test_launch_preserves_inherited_git_config() {
+  local rec id=git-config-append out status launch result pane_shell count
+  rec=$(make_spawn_case "$id" codex "$id")
+  read_case_record "$rec"
+  out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" \
+    "$id" "$PROJ_DIR" --harness 'git config --get-all credential.helper; git config --get core.hooksPath')
+  status=$?
+  expect_code 0 "$status" "Git configuration probe should spawn: $out"
+  launch=$(cat "$LAUNCH_LOG")
+  for pane_shell in /bin/sh /bin/bash /bin/zsh; do
+    [ -x "$pane_shell" ] || continue
+    for count in 2 02; do
+      result=$(GIT_CONFIG_COUNT="$count" \
+        GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
+        GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+        "$pane_shell" -c "$launch") || fail "Git configuration launch failed in $pane_shell"
+      [ "$result" = $'\n!gh auth git-credential\n'"$(cd "$HOME_DIR/state" && pwd -P)/$id.git-hooks" ] \
+        || fail "launch dropped the inherited credential-helper entries in $pane_shell"
+    done
+    result=$(GIT_CONFIG_COUNT=bad "$pane_shell" -c "$launch" 2>&1)
+    status=$?
+    [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched"
+  done
+  pass "launch appends the hooks config while preserving inherited Git credentials in sh, bash and zsh"
 }
 
 test_active_dispatch_profile_allows_raw_launch_command() {
@@ -1644,6 +1677,7 @@ SH
 # permission flag, and any other token refuses before endpoint or metadata.
 claude_settings_json_arg() {  # <launch>
   local command=$1
+  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
@@ -1661,11 +1695,12 @@ claude_settings_json_arg() {  # <launch>
 
 claude_launch_brief_arg() {  # <launch>
   local command=$1
+  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
   (
-    eval "set -- ${command#*; }"
+    eval "set -- $command"
     eval "printf '%s' \"\${$#}\""
   )
 }
@@ -1815,6 +1850,7 @@ test_non_claude_harness_ignores_claude_permission_mode() {
   pass "config/claude-permission-mode changes claude launches only"
 }
 
+test_launch_preserves_inherited_git_config
 test_worker_launch_delivers_role_scope
 test_no_profile_keeps_claude_profile_defaults
 test_claude_launch_brief_publishes_record_doorbell
