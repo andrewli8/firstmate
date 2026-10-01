@@ -5187,24 +5187,49 @@ if [ "$KIND" = secondmate ]; then
   # injected carrier and this on/off snapshot are guaranteed to agree.
   LAUNCH="FM_ROOT_OVERRIDE= FM_STATE_OVERRIDE= FM_DATA_OVERRIDE= FM_PROJECTS_OVERRIDE= FM_CONFIG_OVERRIDE= FM_PUBLIC_FOLLOWUP_PRIMARY_HOME=$sq_primary_home FM_HOME=$sq_home FM_TRACE_CONTEXT=$SPAWN_TRACE_EFFECTIVE FM_SUPERVISION_MODEL=$supervision_model $LAUNCH"
 fi
+# Implement the launch-delivery contract in this script's header. The full
+# home-identity hash isolates equal task ids across homes, and the spawn token in
+# the final filename keeps a buffered source line bound to this incarnation.
+spawn_launch_home_token() {
+  local home=$1 root hash
+  root=$(cd "$home" 2>/dev/null && pwd -P) || root=$home
+  if command -v shasum >/dev/null 2>&1; then
+    hash=$(printf '%s' "$root" | shasum -a 256 | awk '{print $1}')
+  elif command -v sha256sum >/dev/null 2>&1; then
+    hash=$(printf '%s' "$root" | sha256sum | awk '{print $1}')
+  else
+    return 1
+  fi
+  case "$hash" in
+    *[!0-9a-fA-F]*|'') return 1 ;;
+  esac
+  printf '%s' "$hash"
+}
+LAUNCH_HOME_TOKEN=$(spawn_launch_home_token "$FM_HOME") || LAUNCH_HOME_TOKEN=
+if [ -z "$LAUNCH_HOME_TOKEN" ]; then
+  echo "error: could not derive a home identity for the staged launch file" >&2
+  exit 1
+fi
+case "$SPAWN_GEN" in
+  *[!A-Za-z0-9.]*|'') echo "error: spawn incarnation token is not a usable launch-file nonce" >&2; exit 1 ;;
+esac
+LAUNCH_DIR="/tmp/fm-$ID+$LAUNCH_HOME_TOKEN"
 # Pane-scoped override: git in this worker reads our commit-msg strip without
 # rewriting the project's core.hooksPath. GIT_CONFIG_* takes precedence over
 # config files and is inherited by child git processes. When the home opts in
 # to keeping trailers, leave core.hooksPath alone so the repository's hooks run
 # directly. An export statement inside the pane command carries the override
 # across every step of a compound raw launch while firstmate's own git is unchanged.
-# A bad inherited count returns from the sourced launch file before the worker
-# runs, preserving the interactive pane and its visible error for inspection.
+# The helper appends after the GIT_CONFIG_COUNT entries the worker actually
+# inherits (after any launch environment filtering), so credential.helper and
+# other inherited entries survive, and writes a plain export statement into the
+# private launch directory. The pane shell, fish included, only parses a simple
+# command, &&, || and that export list. A bad inherited count returns from the
+# sourced launch file before the worker runs, preserving the interactive pane
+# and its visible error for inspection.
 if [ "$KEEP_AI_TRAILERS" = 0 ]; then
-  # Resolve the index in the destination shell, after any launch environment
-  # filtering. Never replace credential.helper or other inherited entries.
-  # Validate and normalize decimal counts before shell arithmetic (02 is valid
-  # for Git too); reserve room in Git's signed-int count for our one new entry.
-  # shellcheck disable=SC2016
-  GIT_CONFIG_APPEND='fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; return 1 2>/dev/null || exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; return 1 2>/dev/null || exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'
-  # shellcheck disable=SC2016
-  GIT_CONFIG_APPEND="$GIT_CONFIG_APPEND$(shell_quote "$GIT_HOOKS_DIR")"' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; '
-  LAUNCH="$GIT_CONFIG_APPEND$LAUNCH"
+  GIT_CONFIG_ENV_FILE=$(shell_quote "$LAUNCH_DIR/git-config.$SPAWN_GEN.sh")
+  LAUNCH="$(shell_quote "$FM_ROOT/bin/fm-git-strip-ai-trailers.sh") env-file $(shell_quote "$GIT_HOOKS_DIR") $GIT_CONFIG_ENV_FILE && . $GIT_CONFIG_ENV_FILE || return 1 2>/dev/null || exit 1; $LAUNCH"
 fi
 # Every agent this fleet launches - crewmate, scout, and secondmate, on a fresh
 # spawn and on a relaunch alike - runs with the compact-adviser kill switch on.
@@ -5344,33 +5369,6 @@ if [ "$LAUNCH_ENV_ENABLED" = 1 ] || [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
   fi
   LAUNCH="$LAUNCH_ENV_PREFIX /bin/sh -c $(shell_quote "$LAUNCH")"
 fi
-# Implement the launch-delivery contract in this script's header. The full
-# home-identity hash isolates equal task ids across homes, and the spawn token in
-# the final filename keeps a buffered source line bound to this incarnation.
-spawn_launch_home_token() {
-  local home=$1 root hash
-  root=$(cd "$home" 2>/dev/null && pwd -P) || root=$home
-  if command -v shasum >/dev/null 2>&1; then
-    hash=$(printf '%s' "$root" | shasum -a 256 | awk '{print $1}')
-  elif command -v sha256sum >/dev/null 2>&1; then
-    hash=$(printf '%s' "$root" | sha256sum | awk '{print $1}')
-  else
-    return 1
-  fi
-  case "$hash" in
-    *[!0-9a-fA-F]*|'') return 1 ;;
-  esac
-  printf '%s' "$hash"
-}
-LAUNCH_HOME_TOKEN=$(spawn_launch_home_token "$FM_HOME") || LAUNCH_HOME_TOKEN=
-if [ -z "$LAUNCH_HOME_TOKEN" ]; then
-  echo "error: could not derive a home identity for the staged launch file" >&2
-  exit 1
-fi
-case "$SPAWN_GEN" in
-  *[!A-Za-z0-9.]*|'') echo "error: spawn incarnation token is not a usable launch-file nonce" >&2; exit 1 ;;
-esac
-LAUNCH_DIR="/tmp/fm-$ID+$LAUNCH_HOME_TOKEN"
 if ! (umask 077 && mkdir "$LAUNCH_DIR") 2>/dev/null; then
   if [ -L "$LAUNCH_DIR" ] || [ ! -d "$LAUNCH_DIR" ] || [ ! -O "$LAUNCH_DIR" ] ||
     [ -n "$(find "$LAUNCH_DIR" -prune \( -perm -g=w -o -perm -o=w \) -print 2>/dev/null)" ] ||

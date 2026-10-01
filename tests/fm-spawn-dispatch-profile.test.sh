@@ -462,9 +462,15 @@ test_active_dispatch_profile_allows_positional_harness() {
 
 # Replacing inherited config rather than appending the hooks entry loses the
 # scoped HTTPS credential helper. Execute the real emitted launch and ask Git,
-# rather than inspecting command text, to catch that credential widening.
+# rather than inspecting command text, to catch that credential widening. Every
+# pane shell runs with its startup files pointed at the case directory, so a
+# developer's rc file cannot prompt, exec a multiplexer or export GIT_CONFIG_*.
+isolated_pane_env() {  # <assignment-or-command...>
+  env HOME="$CASE_DIR" ZDOTDIR="$CASE_DIR" XDG_CONFIG_HOME="$CASE_DIR" ENV= BASH_ENV= "$@"
+}
+
 test_launch_preserves_inherited_git_config() {
-  local rec id=git-config-append out status launch result pane_shell count launch_file
+  local rec id=git-config-append out status launch result pane_shell count launch_file expected prefix
   rec=$(make_spawn_case "$id" codex "$id")
   read_case_record "$rec"
   out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" \
@@ -474,22 +480,23 @@ test_launch_preserves_inherited_git_config() {
   launch=$(cat "$LAUNCH_LOG")
   launch_file="$CASE_DIR/git-config-launch.sh"
   printf '%s\n' "$launch" > "$launch_file"
+  expected=$'\n!gh auth git-credential\n'"$(cd "$HOME_DIR/state" && pwd -P)/$id.git-hooks"
   for pane_shell in /bin/sh /bin/bash /bin/zsh; do
     [ -x "$pane_shell" ] || continue
     for count in 2 02; do
-      result=$(GIT_CONFIG_COUNT="$count" \
+      result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" \
         GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
         GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
         "$pane_shell" -c "$launch") || fail "Git configuration launch failed in $pane_shell"
-      [ "$result" = $'\n!gh auth git-credential\n'"$(cd "$HOME_DIR/state" && pwd -P)/$id.git-hooks" ] \
+      [ "$result" = "$expected" ] \
         || fail "launch dropped the inherited credential-helper entries in $pane_shell"
     done
-    result=$(GIT_CONFIG_COUNT=bad "$pane_shell" -c "$launch" 2>&1)
+    result=$(isolated_pane_env GIT_CONFIG_COUNT=bad "$pane_shell" -c "$launch" 2>&1)
     status=$?
     [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched"
     for count in bad 2147483647; do
       # shellcheck disable=SC2016 # The child pane expands its own arguments and source status.
-      result=$(GIT_CONFIG_COUNT="$count" "$pane_shell" -i -c \
+      result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" "$pane_shell" -i -c \
         '. "$1"; fm_status=$?; [ "$fm_status" -ne 0 ] || exit 2; printf "\nSHELL-STILL-ALIVE\n"' _ "$launch_file" 2>&1)
       status=$?
       expect_code 0 "$status" "invalid count must preserve the interactive $pane_shell pane"
@@ -497,7 +504,24 @@ test_launch_preserves_inherited_git_config() {
       assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive $pane_shell pane"
     done
   done
-  pass "launch appends the hooks config while preserving inherited Git credentials in sh, bash and zsh"
+  # A fish pane sources the same launch file. Without fish on this host, check
+  # the emitted launch prefix (the staged launch-file contract) for POSIX-only
+  # syntax fish cannot parse.
+  if command -v fish >/dev/null 2>&1; then
+    result=$(isolated_pane_env GIT_CONFIG_COUNT=2 \
+      GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
+      GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+      fish -c "source '$launch_file'") || fail "Git configuration launch failed in fish"
+    [ "$result" = "$expected" ] || fail "launch dropped the inherited credential-helper entries in fish"
+  else
+    prefix=$(fm_test_launch_git_prefix "$launch")
+    # shellcheck disable=SC2016 # These are literal shell tokens fish rejects.
+    case "$prefix" in
+      *'$('* | *'${'* | *'`'* | *'case '* | *'while '* | *'esac'* | *'done'*)
+        fail "the Git configuration launch prefix uses syntax fish cannot parse: $prefix" ;;
+    esac
+  fi
+  pass "launch appends the hooks config while preserving inherited Git credentials in every pane shell"
 }
 
 test_active_dispatch_profile_allows_raw_launch_command() {
@@ -1301,7 +1325,7 @@ test_keep_ai_trailers_omits_attribution_settings_and_strip_hooks() {
   expect_code 0 "$status" "claude spawn with keep-ai-trailers should succeed"$'\n'"$out"
   launch=$(cat "$LAUNCH_LOG")
   assert_attribution_policy_absent "$launch" "opted-in claude"
-  assert_not_contains "$launch" 'GIT_CONFIG_KEY_0=core.hooksPath' \
+  assert_not_contains "$launch" 'fm-git-strip-ai-trailers.sh' \
     "opted-in launch still overrides the repository hooksPath"
   [ ! -e "$HOME_DIR/state/$id.git-hooks" ] \
     || fail "opted-in launch installed AI trailer strip hooks"
@@ -1331,7 +1355,7 @@ test_keep_ai_trailers_reaches_secondmate_crew_launches() {
   expect_code 0 "$status" "secondmate crew spawn should succeed"$'\n'"$out"
   launch=$(cat "$LAUNCH_LOG")
   assert_attribution_policy_absent "$launch" "secondmate crew claude"
-  assert_not_contains "$launch" 'GIT_CONFIG_KEY_0=core.hooksPath' \
+  assert_not_contains "$launch" 'fm-git-strip-ai-trailers.sh' \
     "secondmate crew launch still overrides the repository hooksPath"
   [ ! -e "$HOME_DIR/state/$crew_id.git-hooks" ] \
     || fail "secondmate crew launch installed AI trailer strip hooks"
@@ -1679,7 +1703,7 @@ SH
 # permission flag, and any other token refuses before endpoint or metadata.
 claude_settings_json_arg() {  # <launch>
   local command=$1
-  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
+  case "$command" in *' || return 1 2>/dev/null || exit 1; '*) command=${command#*' || return 1 2>/dev/null || exit 1; '} ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
@@ -1697,7 +1721,7 @@ claude_settings_json_arg() {  # <launch>
 
 claude_launch_brief_arg() {  # <launch>
   local command=$1
-  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
+  case "$command" in *' || return 1 2>/dev/null || exit 1; '*) command=${command#*' || return 1 2>/dev/null || exit 1; '} ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
