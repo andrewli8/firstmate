@@ -1718,11 +1718,8 @@ SH
 # must both produce today's launch byte-for-byte, `auto` swaps only the
 # permission flag, and any other token refuses before endpoint or metadata.
 claude_settings_json_arg() {  # <launch>
-  local command=$1
-  case "$command" in *' || return 1 2>/dev/null || exit 1; '*) command=${command#*' || return 1 2>/dev/null || exit 1; '} ;; esac
-  while [[ "$command" == export\ *\;* ]]; do
-    command=${command#*; }
-  done
+  local command
+  command=$(fm_test_launch_command "$1")
   eval "set -- $command"
   while [ "$#" -gt 0 ]; do
     if [ "$1" = --settings ]; then
@@ -1736,11 +1733,8 @@ claude_settings_json_arg() {  # <launch>
 }
 
 claude_launch_brief_arg() {  # <launch>
-  local command=$1
-  case "$command" in *' || return 1 2>/dev/null || exit 1; '*) command=${command#*' || return 1 2>/dev/null || exit 1; '} ;; esac
-  while [[ "$command" == export\ *\;* ]]; do
-    command=${command#*; }
-  done
+  local command
+  command=$(fm_test_launch_command "$1")
   (
     eval "set -- $command"
     eval "printf '%s' \"\${$#}\""
