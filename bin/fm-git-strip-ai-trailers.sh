@@ -23,7 +23,7 @@
 #       repository hook, as in plain git; any other failed lookup exits
 #       nonzero rather than skipping the repository's hook. Does not touch the
 #       project's git config; the caller prefixes the pane with
-#       GIT_CONFIG_COUNT / GIT_CONFIG_KEY_0 / GIT_CONFIG_VALUE_0.
+#       an appended GIT_CONFIG_KEY_n / GIT_CONFIG_VALUE_n entry and count.
 #
 # WHY THIS EXISTS. Claude launches already carry attribution-off in their
 # per-launch --settings JSON. Cursor and other non-Claude runtimes inject a
