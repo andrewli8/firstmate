@@ -152,6 +152,33 @@ test_enter_writes_a_v2_record_in_one_step_and_announces_hold_for_return() {
   pass "one enter call writes a version 2 record, announces hold-for-return only, reads it back without asking for a go, and every read subcommand reflects it"
 }
 
+# entered and entered_epoch come from one clock read: a clock that ticks to the
+# next second between two reads must not split the entry across two seconds,
+# or the return brief's away window disagrees with the recorded entry.
+test_entry_stamps_one_second_across_a_clock_tick() {
+  local home fakebin real_date
+  home=$(make_home clock-tick)
+  fakebin="$home/fakebin"
+  real_date=$(command -v date)
+  mkdir -p "$fakebin"
+  cat > "$fakebin/date" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+  +%s) printf '1789600000\n' ;;
+  '-u +%Y-%m-%dT%H:%M:%SZ') printf '2026-09-16T23:06:41Z\n' ;;
+  *) exec "$real_date" "\$@" ;;
+esac
+SH
+  chmod +x "$fakebin/date"
+  PATH="$fakebin:$PATH" contract "$home" enter --words 'merge it when green' >/dev/null 2>&1 || fail "enter failed under a ticking clock"
+  [ "$(contract "$home" field entered_epoch)" = 1789600000 ] || fail "entered_epoch was not the clock read"
+  [ "$(contract "$home" field entered)" = 2026-09-16T23:06:40Z ] \
+    || fail "entered names a different second than entered_epoch: $(contract "$home" field entered)"
+  [ "$(contract "$home" field confirmed)" = 2026-09-16T23:06:40Z ] \
+    || fail "confirmed names a different second than confirmed_epoch: $(contract "$home" field confirmed)"
+  pass "a fresh entry stamps entered and entered_epoch from one clock read"
+}
+
 # The wait-for-go gate is gone: the retired two-step subcommands and the
 # proposal read flag are refused by name and write nothing, so no caller can
 # stage a mandate that waits on a further human response before it binds.
@@ -625,6 +652,7 @@ test_away_entry_over_quiet_mode_becomes_away_and_quiet_never_masks_away() {
 test_readback_renders_words_verbatim_with_the_record_scalars
 test_words_preserve_final_newline_shape
 test_enter_writes_a_v2_record_in_one_step_and_announces_hold_for_return
+test_entry_stamps_one_second_across_a_clock_tick
 test_retired_two_step_entry_is_refused_by_name
 test_enter_removes_a_legacy_proposal_without_promoting_it
 test_same_turn_entry_pre_authorizes_nothing_on_the_never_set
