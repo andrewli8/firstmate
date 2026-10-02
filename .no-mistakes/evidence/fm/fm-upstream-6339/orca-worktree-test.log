@@ -1,4 +1,5 @@
-ok - real tmux preserves absent/C locale values and non-UTF-8 bytes, rejects missing/phantom names and excludes the automatic SSH agent
+FM_TEST_BEGIN 2026-10-02T19:31:24Z tests/fm-spawn-orca-worktree.test.sh family=unclassified expected_gate_skip=none
+ok - real tmux preserves absent/C locale values and reported raw bytes, rejects missing/phantom names and excludes the automatic SSH agent
 ok - Orca refuses source=absent before allocating resources
 ok - Orca source/allowlist=enabled preserves controlled values, clears ambient credentials and keeps values off terminal input
 ok - Orca source/allowlist=empty preserves controlled values, clears ambient credentials and keeps values off terminal input
@@ -12,4 +13,7 @@ ok - a failed Orca spawn keeps the delivered launch file while its terminal stay
 ok - an Orca-backed fresh spawn enters the worktree Orca created for it, instead of hard-refusing on the post-launch proof
 ok - a relaunch against an Orca-backed task is refused before the RELAUNCH+orca worktree carve-out could run
 # all fm-spawn-orca-worktree tests passed
-bash tests/fm-spawn-orca-worktree.test.sh  10.06s user 8.67s system 48% cpu 38.568 total
+FM_TEST_END 2026-10-02T19:32:14Z tests/fm-spawn-orca-worktree.test.sh exit=0 duration_ms=49649 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=49746
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=49649 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-spawn-orca-worktree.test.sh duration_ms=49649

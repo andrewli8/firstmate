@@ -1,0 +1,20 @@
+### scenario=missing-name
+### config: session=scoped-src allowlist=GH_TOKEN NOT_IN_SESSION 
+### Orca terminal personal env: GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh DATABASE_URL=personal-db LANG=personal-lang GIT_CONFIG_NOSYSTEM=0
+### scoped tmux session env:
+    GH_CONFIG_DIR=scoped-gh
+    GH_TOKEN=scoped-token-with 'quote' $(touch /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.5WT0Fp/injected)
+    -LANG
+    SSH_AUTH_SOCK=/scoped/agent.sock
+### fm-spawn.sh output:
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.5WT0Fp
+    error: cannot snapshot configured tmux launch environment (required name NOT_IN_SESSION); refusing Orca launch
+    exit=1
+### orca worktree allocated: no; meta published: no
+### text sent to Orca terminal input:
+    <none>
+### worker env (as seen by the launched harness):
+    <worker never ran>
+### launch files present when worker started: 0
+### launch files left after run: 0
+### shell injection fired: no

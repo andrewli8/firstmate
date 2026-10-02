@@ -1,0 +1,32 @@
+### scenario=source
+### config: session=scoped-src allowlist=GH_TOKEN GH_CONFIG_DIR LANG 
+### Orca terminal personal env: GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh DATABASE_URL=personal-db LANG=personal-lang GIT_CONFIG_NOSYSTEM=0
+### scoped tmux session env:
+    GH_CONFIG_DIR=scoped-gh
+    GH_TOKEN=scoped-token-with 'quote' $(touch /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/injected)
+    -LANG
+    SSH_AUTH_SOCK=/scoped/agent.sock
+### fm-spawn.sh output:
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj
+    warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/data/lab-orca-source/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-orca-source
+    warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/data/lab-orca-source/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+    notice: lab-orca-source ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+    spawned lab-orca-source harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-orca-source worktree=/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/orca-wt/fm-lab-orca-source
+    exit=0
+### orca worktree allocated: yes; meta published: yes
+### text sent to Orca terminal input:
+    cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/orca-wt/fm-lab-orca-source'
+    export GOTMPDIR=/tmp/fm-lab-orca-source/gotmp
+    export COMPACT_ADVISER_DISABLE=1
+    export FM_TASK_ID=lab-orca-source
+    . '/tmp/fm-lab-orca-source+23efbe011bf563f7df12f161bbe04bcda19ac73261931ea48448f77ce9386567/launch.s1790969628.393.32177.sh'
+### worker env (as seen by the launched harness):
+    GH_TOKEN=scoped-token-with 'quote' $(touch /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Gzyulj/injected)
+    GH_CONFIG_DIR=scoped-gh
+    DATABASE_URL=<unset>
+    LANG=<unset>
+    GIT_CONFIG_NOSYSTEM=1
+    SSH_AUTH_SOCK=<unset>
+### launch files present when worker started: 0
+### launch files left after run: 0
+### shell injection fired: no
