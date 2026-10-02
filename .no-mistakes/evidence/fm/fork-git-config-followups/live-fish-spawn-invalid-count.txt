@@ -1,0 +1,6 @@
+# tmux global env GIT_CONFIG_COUNT=bad; spawn transcript:
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.9uAMYw
+warning: secondmate smbad sync skipped before launch: primary default-branch commit cannot be resolved
+spawned smbad harness=sh kind=secondmate mode=secondmate yolo=off window=primary:fm-smbad worktree=/private/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/fm-lab-sm.2H3mL4
+# worker marker file present?
+ls: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.9uAMYw/probe-bad.out: No such file or directory

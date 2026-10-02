@@ -1,0 +1,1 @@
+export GIT_CONFIG_KEY_2=core.hooksPath GIT_CONFIG_VALUE_2='/private/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/fm-lab.9uAMYw/state/smlive.git-hooks' GIT_CONFIG_COUNT=3

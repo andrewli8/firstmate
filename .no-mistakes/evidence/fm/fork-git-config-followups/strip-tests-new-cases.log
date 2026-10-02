@@ -1,0 +1,6 @@
+ok - a Cursor --trailer commit object has no AI co-author and keeps the captain identity
+ok - install chains the previous commit-msg hook after stripping
+ok - the repository's pre-push runs and can refuse under every hooksPath override channel
+ok - a git -c hooksPath override still strips the trailer and chains the project's hooks
+ok - the repository's own hook keeps inherited GIT_CONFIG entries such as a scoped credential helper
+ok - env-file writes the canonical hooks path so wrappers still chain the repository hook

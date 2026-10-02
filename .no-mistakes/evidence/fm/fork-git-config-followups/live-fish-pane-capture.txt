@@ -1,0 +1,5 @@
+Welcome to fish, the friendly interactive shell
+Type help for instructions on how to use fish
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.JKHYbW> export GOTMPDIR=/tmp/fm-smlive/gotmp
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.JKHYbW (main)> export COMPACT_ADVISER_DISABLE=1
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.JKHYbW (main)> . '/tmp/fm-smlive+cad3376cfd60b82889ad0bd8130f55f19948ab8dae05eed031472aabad4f7781/launch.s1790950993.90317.30993.sh'

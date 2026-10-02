@@ -1,0 +1,10 @@
+Welcome to fish, the friendly interactive shell
+Type help for instructions on how to use fish
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4> export GOTMPDIR=/tmp/fm-smbad/gotmp
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4> export COMPACT_ADVISER_DISABLE=1
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4> . '/tmp/fm-smbad+cad3376cfd60b82889ad0bd8130f55f19948ab8dae05eed031472aabad4f7781/launch.s1790951027.96609.5697.sh'
+error: invalid inherited GIT_CONFIG_COUNT
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4 [1]> 
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4 [1]> echo FISH-PANE-STILL-ALIVE status=$status
+FISH-PANE-STILL-ALIVE status=1
+andrew@MacBook-Air /p/v/f/q/n/T/fm-lab-sm.2H3mL4> 

@@ -1,0 +1,7 @@
+# base (81baed1) launch prefix sourced by fish 4.9.3:
+fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; return 1 2>/dev/null || exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; return 1 2>/dev/null || exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'/tmp/hooks' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; 
+# fish output:
+fish: Unsupported use of '='. In fish, please use 'set fm_git_count ${GIT_CONFIG_COUNT:-0}'.
+fm_git_count=${GIT_CONFIG_COUNT:-0}; case "$fm_git_count" in *[!0-9]*) echo "error: invalid inherited GIT_CONFIG_COUNT" >&2; return 1 2>/dev/null || exit 1 ;; esac; while [ "${fm_git_count#0}" != "$fm_git_count" ]; do fm_git_count=${fm_git_count#0}; done; fm_git_count=${fm_git_count:-0}; if [ "${#fm_git_count}" -gt 10 ] || [ "$fm_git_count" -ge 2147483647 ]; then echo "error: inherited GIT_CONFIG_COUNT cannot be extended" >&2; return 1 2>/dev/null || exit 1; fi; export "GIT_CONFIG_KEY_${fm_git_count}=core.hooksPath" "GIT_CONFIG_VALUE_${fm_git_count}="'/tmp/hooks' GIT_CONFIG_COUNT=$((fm_git_count + 1)); unset fm_git_count; echo WORKER-RAN
+^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+# exit=127
