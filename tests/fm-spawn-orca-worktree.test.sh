@@ -78,6 +78,9 @@ case "$1 $2" in
         prev=$a
       done
     fi
+    if [ "${FM_TEST_ORCA_SEND_FAIL:-0}" = 1 ]; then
+      case "$*" in *"--text . "*) exit 1 ;; esac
+    fi
     printf '{"ok":true}\n'
     exit 0
     ;;
@@ -176,7 +179,7 @@ EOF
 # these executions of the real staged spawn command.
 test_orca_launch_uses_controlled_tmux_environment() {
   local setting case_dir home id fb out status staged staged_content result expected value pane_shell failbin
-  for setting in absent enabled empty unavailable malformed nonregular missing; do
+  for setting in absent enabled empty unavailable malformed nonregular missing sendfail; do
     id="orca-env-$setting"
     case_dir="$TMP_ROOT/$id"
     home="$case_dir/home"
@@ -187,7 +190,7 @@ test_orca_launch_uses_controlled_tmux_environment() {
     if [ "$setting" = malformed ]; then printf 'wrong:selector\n' > "$home/config/launch-env-tmux-session"; fi
     if [ "$setting" = nonregular ]; then rm "$home/config/launch-env-tmux-session"; mkdir "$home/config/launch-env-tmux-session"; fi
     case "$setting" in
-      enabled|missing) printf 'GH_TOKEN\nGH_CONFIG_DIR\nFM_TEST_NOT_SET\n' > "$home/config/launch-env-allowlist" ;;
+      enabled|missing|sendfail) printf 'GH_TOKEN\nGH_CONFIG_DIR\nFM_TEST_NOT_SET\nLANG\n' > "$home/config/launch-env-allowlist" ;;
       empty) : > "$home/config/launch-env-allowlist" ;;
       absent) ;;
       *) printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist" ;;
@@ -206,13 +209,13 @@ EOF
 #!/bin/sh
 launch_file=$(cat "$1")
 [ ! -e "$launch_file" ] || { echo 'launch file still contains credentials when the worker starts' >&2; exit 1; }
-printf '%s\n' "${GH_TOKEN-unset}" "${GH_CONFIG_DIR-unset}" "${DATABASE_URL-unset}" "${FM_TEST_NOT_SET-unset}" "${FM_TEST_PERSONAL-unset}" "${GIT_CONFIG_NOSYSTEM-unset}"
+printf '%s\n' "${GH_TOKEN-unset}" "${GH_CONFIG_DIR-unset}" "${DATABASE_URL-unset}" "${FM_TEST_NOT_SET-unset}" "${FM_TEST_PERSONAL-unset}" "${GIT_CONFIG_NOSYSTEM-unset}" "${LANG-unset}"
 EOF
     value="synthetic-' \$(touch $case_dir/injected) \`false\`"$'\nline\n\n'
     VALUE="$value" python3 - "$case_dir/source.json" <<'PY'
 import json,os,sys
 with open(sys.argv[1], 'w') as f:
- json.dump({'GH_TOKEN':os.environ['VALUE'], 'GH_CONFIG_DIR':'scoped-gh', 'DATABASE_URL':'readonly-db', 'FM_TEST_NOT_SET':None}, f)
+ json.dump({'GH_TOKEN':os.environ['VALUE'], 'GH_CONFIG_DIR':'scoped-gh', 'DATABASE_URL':'readonly-db', 'FM_TEST_NOT_SET':None, 'LANG':None}, f)
 PY
     fb=$(make_orca_fakebin "$case_dir")
     cat > "$fb/tmux" <<'EOF'
@@ -234,6 +237,7 @@ EOF
       FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
       FM_TEST_ORCA_LOG="$case_dir/terminal.log" \
       FM_TEST_SOURCE_UNAVAILABLE="$([ "$setting" = unavailable ] && echo 1 || echo 0)" \
+      FM_TEST_ORCA_SEND_FAIL="$([ "$setting" = sendfail ] && echo 1 || echo 0)" \
       PATH="$fb:$PATH" "$SPAWN" "$id" "$case_dir/project" \
       --mode direct-PR --yolo off --backend orca --harness "/bin/sh '$case_dir/probe.sh' '$case_dir/stage-path'" 2>&1)
     status=$?
@@ -245,12 +249,20 @@ EOF
       pass "Orca refuses source=$setting before allocating resources"
       continue
     fi
+    if [ "$setting" = sendfail ]; then
+      expect_code 1 "$status" "undelivered controlled-source launch must fail: $out"
+      for staged in /tmp/fm-"$id"+*/launch.*.sh; do
+        [ ! -e "$staged" ] || fail "undelivered launch left credentials in $staged"
+      done
+      pass "Orca removes the credential launch file when the launch cannot be delivered"
+      continue
+    fi
     expect_code 0 "$status" "controlled-source spawn should succeed: $out"
     assert_not_contains "$out" "warning: backend=orca" "a configured source must not warn about ambient Orca values"
     staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
     [ -f "$staged" ] || fail "Orca did not receive the staged launch path"
-    [ "$(stat -f '%Lp' "$staged" 2>/dev/null || stat -c '%a' "$staged")" = 600 ] || fail "credential launch file is not private"
-    [ "$(stat -f '%Lp' "$(dirname "$staged")" 2>/dev/null || stat -c '%a' "$(dirname "$staged")")" = 700 ] || fail "credential launch directory is not private"
+    [ "$(stat -c '%a' "$staged" 2>/dev/null || stat -f '%Lp' "$staged")" = 600 ] || fail "credential launch file is not private"
+    [ "$(stat -c '%a' "$(dirname "$staged")" 2>/dev/null || stat -f '%Lp' "$(dirname "$staged")")" = 700 ] || fail "credential launch directory is not private"
     assert_not_contains "$(cat "$case_dir/terminal.log")" synthetic "source values leaked into terminal input"
     staged_content=$(cat "$staged")
     printf '%s\n' "$staged" > "$case_dir/stage-path"
@@ -258,8 +270,8 @@ EOF
     printf '#!/bin/sh\nexit 1\n' > "$failbin/rm"
     chmod +x "$failbin/rm"
     case "$setting" in
-      enabled) expected="$value"$'\nscoped-gh\nunset\nunset\nunset\n1' ;;
-      empty) expected=$'unset\nunset\nunset\nunset\nunset\n1' ;;
+      enabled) expected="$value"$'\nscoped-gh\nunset\nunset\nunset\n1\nunset' ;;
+      empty) expected=$'unset\nunset\nunset\nunset\nunset\n1\npersonal-lang' ;;
     esac
     for pane_shell in /bin/sh /bin/bash /bin/zsh; do
       [ -x "$pane_shell" ] || continue
@@ -273,7 +285,7 @@ EOF
       [ -f "$staged" ] || fail "failed deletion unexpectedly removed the private launch file"
       result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
         GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh FM_TEST_PERSONAL=personal-value \
-        FM_TEST_NOT_SET=personal-value GIT_CONFIG_NOSYSTEM=0 \
+        FM_TEST_NOT_SET=personal-value GIT_CONFIG_NOSYSTEM=0 LANG=personal-lang \
         "$pane_shell" -c ". '$staged'") || fail "controlled-source launch failed in $pane_shell"
       [ "$result" = "$expected" ] || fail "Orca source/allowlist=$setting lost isolation or values in $pane_shell"$'\n'"actual: $result"
       [ ! -e "$case_dir/injected" ] || fail "source value executed shell syntax"
