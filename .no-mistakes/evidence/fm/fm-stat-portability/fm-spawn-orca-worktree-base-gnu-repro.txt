@@ -1,0 +1,5 @@
+### BASE commit 0f65545f test, GNU stat first on PATH
+ok - real tmux preserves absent/C locale values, rejects missing/phantom names and excludes the automatic SSH agent
+ok - Orca refuses source=absent before allocating resources
+not ok - credential launch file is not private
+exit=1

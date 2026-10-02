@@ -1,0 +1,24 @@
+### host BSD stat
+ok - unknown candidate pools are refused
+ok - family pool JSON scopes jobs admission to proven concurrency
+ok - candidate --list is non-empty, sorted, unique, and real
+ok - serial classes remain excluded from the parallel candidate set
+ok - audited fake-backend and stub-network extras are candidates
+ok - exclusion list documents serial reasons
+ok - isolation-proof contract test is family-mapped
+ok - parallel shards consume the proven-isolated set only
+ok - fixture repositories pin their initial branch to main
+bash tests/fm-test-isolation-proof.test.sh  1.86s user 2.06s system 68% cpu 5.742 total
+exit=0
+### GNU stat (gstat 9.9) first on PATH
+ok - unknown candidate pools are refused
+ok - family pool JSON scopes jobs admission to proven concurrency
+ok - candidate --list is non-empty, sorted, unique, and real
+ok - serial classes remain excluded from the parallel candidate set
+ok - audited fake-backend and stub-network extras are candidates
+ok - exclusion list documents serial reasons
+ok - isolation-proof contract test is family-mapped
+ok - parallel shards consume the proven-isolated set only
+ok - fixture repositories pin their initial branch to main
+PATH=$GNU:$PATH bash tests/fm-test-isolation-proof.test.sh  1.82s user 1.79s system 75% cpu 4.794 total
+exit=0

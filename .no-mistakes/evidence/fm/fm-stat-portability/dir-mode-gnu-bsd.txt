@@ -1,0 +1,9 @@
+dir_mode extracted verbatim from bin/fm-test-isolation-proof.sh
+## host stat (/usr/bin/stat)
+tmp.hQMNh0dzEa -> [700] rc=0
+open -> [755] rc=0
+missing -> [] rc=1
+## gnu stat (/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.ZrluaJeXuN/stat)
+tmp.hQMNh0dzEa -> [700] rc=0
+open -> [755] rc=0
+missing -> [] rc=1

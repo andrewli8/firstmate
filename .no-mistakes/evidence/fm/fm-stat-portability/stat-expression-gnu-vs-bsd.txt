@@ -1,0 +1,13 @@
+== GNU stat on PATH: stat (GNU coreutils) 9.9
+-- base-commit expression (stat -f '%Lp' || stat -c '%a') under GNU stat:
+[  File: "/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.fxHsFiLr1g"
+    ID: 10000120000001a Namelen: ?       Type: apfs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 242837545  Free: 55647851   Available: 55647851
+Inodes: Total: 2234536733 Free: 2225914040
+600]
+MISMATCH (old test would fail: credential launch file is not private)
+-- branch expression (stat -c '%a' || stat -f '%Lp') under GNU stat:
+[600]
+-- branch expression under host BSD stat:
+[600]
