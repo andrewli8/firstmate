@@ -5439,17 +5439,20 @@ spawn_orca_launch_send_fail() {
   exit 1
 }
 SPAWN_LAUNCH_SENT=1
-if ! spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")" &&
-  [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
-  spawn_orca_launch_send_fail
+# errexit is on here: a failed send still exits, and Orca source mode first
+# removes the credential-bearing file the pane never received.
+if ! spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")"; then
+  [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_launch_send_fail
+  exit 1
 fi
 sleep 0.3
 if [ "${HERDR_PROJECTED:-0}" -eq 1 ]; then
   HERDR_PROJECTION_ABORT_CLEANUP=0
   spawn_herdr_presentation_order_lock_release
 fi
-if ! spawn_send_key "$T" Enter && [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
-  spawn_orca_launch_send_fail
+if ! spawn_send_key "$T" Enter; then
+  [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_launch_send_fail
+  exit 1
 fi
 if [ "$HARNESS" = kimi ]; then
   if ! kimi_wait_for_ready; then
