@@ -629,6 +629,7 @@ test_refused_spawn_leaves_no_task_state() {
 # pane sees after the leading export statements.
 claude_launch_doorbell() {  # <launch command>
   local command=$1
+  case "$command" in *'unset fm_git_count; '*) command=${command#*unset fm_git_count; } ;; esac
   while [[ "$command" == export\ *\;* ]]; do
     command=${command#*; }
   done
