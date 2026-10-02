@@ -1,0 +1,14 @@
+Real render_export_dom helper (extracted verbatim from tests/fm-calm-pi-extension.test.sh at base 8690c41 and target 05f14d2), driven against real browsers on macOS 15 (Darwin 24.6.0) with the helper's private HOME.
+
+BEFORE (base helper, no keychain flags), Chromium 135.0.7013.0:
+  render_rc=1, DOM bytes=0
+  attempt 1: exit=137 timed_out=yes bytes=0
+  attempt 2: exit=137 timed_out=yes bytes=0
+  attempt 3: exit=137 timed_out=yes bytes=0
+  unified log: Chromium calls SecKeychainFindGenericPassword + SecKeychainAddGenericPassword on every attempt; SecurityAgent (pid 88645) launched at 00:41:21, 2s after the first attempt started (the "Keychain Not Found" prompt).
+
+AFTER (target helper, --use-mock-keychain --password-store=basic):
+  Chromium 135.0.7013.0      render_rc=0 on attempt 1, DOM contains CALM_RENDER_OK
+  Google Chrome 154.0.8037.93 render_rc=0 on attempt 1, DOM contains CALM_RENDER_OK
+  unified log: no SecKeychainFind/Add*Password calls, no SecurityAgent activity; only SecKeychainAddCallback registration lines.
+  Both browsers produced byte-identical DOMs.
