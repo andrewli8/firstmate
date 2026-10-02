@@ -1,0 +1,29 @@
+### BASE test, GNU stat first on PATH
+ok - real tmux preserves absent/C locale values, rejects missing/phantom names and excludes the automatic SSH agent
+ok - Orca refuses source=absent before allocating resources
+not ok - credential launch file is not private
+exit=
+### HEAD test, GNU stat first on PATH
+ok - real tmux preserves absent/C locale values, rejects missing/phantom names and excludes the automatic SSH agent
+ok - Orca refuses source=absent before allocating resources
+ok - Orca source/allowlist=enabled preserves controlled values, clears ambient credentials and keeps values off terminal input
+ok - Orca source/allowlist=empty preserves controlled values, clears ambient credentials and keeps values off terminal input
+ok - Orca refuses source=unavailable before allocating resources
+ok - Orca refuses source=malformed before allocating resources
+ok - Orca refuses source=nonregular before allocating resources
+ok - Orca refuses source=missing before allocating resources
+ok - an Orca-backed fresh spawn enters the worktree Orca created for it, instead of hard-refusing on the post-launch proof
+ok - a relaunch against an Orca-backed task is refused before the RELAUNCH+orca worktree carve-out could run
+exit=
+### HEAD test, macOS BSD stat
+ok - real tmux preserves absent/C locale values, rejects missing/phantom names and excludes the automatic SSH agent
+ok - Orca refuses source=absent before allocating resources
+ok - Orca source/allowlist=enabled preserves controlled values, clears ambient credentials and keeps values off terminal input
+ok - Orca source/allowlist=empty preserves controlled values, clears ambient credentials and keeps values off terminal input
+ok - Orca refuses source=unavailable before allocating resources
+ok - Orca refuses source=malformed before allocating resources
+ok - Orca refuses source=nonregular before allocating resources
+ok - Orca refuses source=missing before allocating resources
+ok - an Orca-backed fresh spawn enters the worktree Orca created for it, instead of hard-refusing on the post-launch proof
+ok - a relaunch against an Orca-backed task is refused before the RELAUNCH+orca worktree carve-out could run
+exit=

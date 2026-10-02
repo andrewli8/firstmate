@@ -1,0 +1,12 @@
+### Old pattern under GNU stat (Linux semantics):
+$ stat -f '%Lp' f 2>/dev/null || stat -c '%a' f
+  File: "/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.VC04G0yru8"
+    ID: 10000120000001a Namelen: ?       Type: apfs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 242837545  Free: 54668715   Available: 54668715
+Inodes: Total: 2195469806 Free: 2186748600
+600
+### New pattern under GNU stat:
+600
+### New pattern under macOS BSD stat:
+600

@@ -1,0 +1,19 @@
+### BASE lib, GNU stat (expected 1577836800)
+/tmp/base-fm-x-lib.sh: line 55: /tmp/fm-tasks-axi-lib.sh: No such file or directory
+/tmp/base-fm-x-lib.sh: line 57: /tmp/fm-backlog-transition-lib.sh: No such file or directory
+/tmp/base-fm-x-lib.sh: line 62: /tmp/fm-env-lib.sh: No such file or directory
+1577836800
+rc=0
+### BASE lib, BSD stat (expected 1577836800)
+/tmp/base-fm-x-lib.sh: line 55: /tmp/fm-tasks-axi-lib.sh: No such file or directory
+/tmp/base-fm-x-lib.sh: line 57: /tmp/fm-backlog-transition-lib.sh: No such file or directory
+/tmp/base-fm-x-lib.sh: line 62: /tmp/fm-env-lib.sh: No such file or directory
+1577836800
+rc=0
+### HEAD lib, GNU stat (expected 1577836800)
+1577836800
+rc=0
+### HEAD lib, BSD stat (expected 1577836800)
+1577836800
+rc=0
+57:ok - the context registry reads file mtimes with GNU and BSD stat
