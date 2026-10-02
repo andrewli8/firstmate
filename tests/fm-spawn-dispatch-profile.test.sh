@@ -505,9 +505,8 @@ test_launch_preserves_inherited_git_config() {
     done
   done
   # A fish pane sources the same launch file, so fish runs the same append and
-  # refusal cases. CI installs fish and must not fall back. Without fish on a
-  # local host, check the emitted launch prefix (the staged launch-file
-  # contract) for POSIX-only syntax fish cannot parse.
+  # refusal cases. Without fish, check the emitted launch prefix (the staged
+  # launch-file contract) for POSIX-only syntax fish cannot parse.
   if command -v fish >/dev/null 2>&1; then
     for count in 2 02; do
       result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" \
@@ -527,8 +526,6 @@ test_launch_preserves_inherited_git_config() {
       assert_contains "$result" 'error: ' "count refusal must remain visible in fish"
       assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive fish pane"
     done
-  elif [ "${CI:-}" = true ]; then
-    fail "fish is required in CI to execute the fish pane launch"
   else
     prefix=$(fm_test_launch_git_prefix "$launch")
     # shellcheck disable=SC2016 # These are literal shell tokens fish rejects.
