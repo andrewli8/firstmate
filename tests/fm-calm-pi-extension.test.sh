@@ -53,6 +53,26 @@ wait_for_text() {
   return 1
 }
 
+# Prints how many terminal cells precede the last working-ship hull in a capture,
+# counting UTF-8 lead bytes so the result is the same in any locale.
+boat_hull_cell() {
+  local hull_line
+  hull_line=$(grep -F '╲▁▁▁╱' "$1" | tail -1)
+  [ -n "$hull_line" ] || return 1
+  printf '%s' "${hull_line%%╲▁▁▁╱*}" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' '
+}
+
+# Pi 1.0.0 defaults its TUI to a fullscreen alternate-screen mode whose scrollable
+# transcript is application-owned: rows that leave the viewport stay reachable
+# through Pi's own scroll keys but never enter terminal scrollback, so
+# tmux capture-pane -S can no longer see them. Transcript assertions below need
+# real terminal scrollback, so each launch pins the regular TUI mode wherever the
+# flag exists; versions without the flag retain their existing launch arguments.
+PI_TUI_MODE_ARGS=
+if pi --help 2>&1 | grep -q -- '--tui-mode'; then
+  PI_TUI_MODE_ARGS='--tui-mode regular'
+fi
+
 find_chrome() {
   local candidate
   if [ -n "${FM_CHROME_BIN:-}" ] && [ -x "$FM_CHROME_BIN" ]; then
@@ -114,7 +134,9 @@ render_export_dom() {
     # the same document in about a second. macOS derives its profile directory
     # from ~/Library regardless of HOME, so Darwin keeps the explicit
     # --user-data-dir that was this file's original isolation. Either way each
-    # attempt starts from the fresh directory removed just above.
+    # attempt starts from the fresh directory removed just above. The private
+    # HOME has no login keychain, so the mock keychain and basic password store
+    # keep macOS from prompting to create one; Linux ignores both switches.
     case "$(uname -s)" in
       Darwin) profile_arg=(--user-data-dir="$profile") ;;
       *) profile_arg=() ;;
@@ -127,6 +149,8 @@ render_export_dom() {
       --no-sandbox \
       --disable-dev-shm-usage \
       --disable-background-networking \
+      --use-mock-keychain \
+      --password-store=basic \
       --virtual-time-budget=2000 \
       --dump-dom \
       "file://$source_file" >"$out_file" 2>"$log" &
@@ -2289,7 +2313,7 @@ TS
     fi
 
     tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 160 -y 36 \
-      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-context-files --no-skills --no-prompt-templates --no-extensions $extensions $session_arg; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
+      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-context-files --no-skills --no-prompt-templates --no-extensions $extensions $session_arg; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
     i=0
     while [ "$i" -lt 120 ]; do
       pane=$(tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" -S - 2>/dev/null || true)
@@ -2428,7 +2452,7 @@ JS
     tmux -L "$TMUX_SOCKET" kill-session -t "$TMUX_SESSION" 2>/dev/null || true
     printf '%s\n' on >"$home/config/calm"
     tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 160 -y 36 \
-      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-context-files --no-skills --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./followup-e2e.ts --session '$exact_session'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
+      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-context-files --no-skills --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./followup-e2e.ts --session '$exact_session'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
     i=0
     while [ "$i" -lt 120 ]; do
       pane=$(tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" -S - 2>/dev/null || true)
@@ -2599,7 +2623,7 @@ TS
     printf '%s\n' "$calm_state" >"$home/config/calm"
     mkdir -p "$sessions/$label"
     tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 160 -y 36 \
-      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' QUEUED_ESCAPE_HELD='$held' QUEUED_ESCAPE_STATUS_LOG='$sessions/$label/status.log' PI_OFFLINE=1 pi --approve --no-context-files --no-skills --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./queued-escape-e2e.ts --session-dir '$sessions/$label'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
+      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' QUEUED_ESCAPE_HELD='$held' QUEUED_ESCAPE_STATUS_LOG='$sessions/$label/status.log' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-context-files --no-skills --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./queued-escape-e2e.ts --session-dir '$sessions/$label'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
     wait_for_text "$TMP_ROOT/queued-escape-pane" 'queued-escape-e2e.ts' \
       || fail "Pi queued-row $label case did not reach the ready composer"
     tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" -l "/queued-escape-e2e $label"
@@ -2798,7 +2822,7 @@ TS
     local session_arg=$1
     tmux -L "$TMUX_SOCKET" kill-session -t "$TMUX_SESSION" 2>/dev/null || true
     tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 100 -y 44 \
-      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' PI_OFFLINE=1 pi --approve --no-context-files --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./geometry-provider.ts $session_arg; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
+      "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-context-files --no-prompt-templates --no-extensions -e ./.pi/extensions/fm-calm.ts -e ./geometry-provider.ts $session_arg; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 20"
   }
 
   capture_geometry_viewport() {
@@ -3943,7 +3967,7 @@ SH
 }
 
 test_interactive_terminal_e2e() {
-  local project config home session_file export_file export_dom default_snapshot expanded_snapshot hidden_snapshot active_before_snapshot active_hidden_snapshot export_snapshot export_settled_snapshot restored_snapshot working_snapshot working_response_snapshot restarted_snapshot resumed_restored_snapshot hash_before hash_after now version chrome chrome_report active_wait active_screen_wait boat_frame_one boat_frame_two boat_resized_snapshot boat_focus_snapshot boat_cleared_snapshot boat_hull_line boat_sail_line boat_column_one boat_column_two boat_line boat_color_snapshot boat_color_line boat_water_snapshot boat_water_line boat_water_first boat_water_changed boat_narrow_snapshot boat_freeze_snapshot boat_resume_snapshot boat_freeze_column boat_freeze_sail boat_resume_column boat_resume_sail
+  local project config home session_file export_file export_dom default_snapshot expanded_snapshot hidden_snapshot active_before_snapshot active_hidden_snapshot export_snapshot export_settled_snapshot restored_snapshot working_snapshot working_response_snapshot restarted_snapshot resumed_restored_snapshot hash_before hash_after now version chrome chrome_report active_wait active_screen_wait boat_frame_one boat_frame_two boat_resized_snapshot boat_focus_snapshot boat_cleared_snapshot boat_hull_line boat_sail_line boat_column_one boat_column_two boat_line boat_color_snapshot boat_color_line boat_water_snapshot boat_water_line boat_water_first boat_water_changed boat_narrow_snapshot boat_freeze_snapshot boat_resume_snapshot boat_freeze_cell boat_freeze_sail boat_resume_cell boat_resume_sail boat_seen_cell boat_resume_offset
   if ! command -v pi >/dev/null 2>&1 || ! command -v tmux >/dev/null 2>&1; then
     echo "skip: pi or tmux not found for Pi calm interactive E2E"
     return 0
@@ -4190,7 +4214,7 @@ TS
 JSON
 
   tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 44 \
-    "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
+    "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
   wait_for_text "$default_snapshot" "The deterministic tool example is complete." \
     || fail "Pi calm E2E did not reach the restored session transcript"
   assert_contains "$(cat "$default_snapshot")" "CALM_E2E_OUTPUT" "calm mode was not off by default"
@@ -4731,14 +4755,14 @@ JS
   # Capture the last on-screen column and sail before settling so the next working
   # period in this same Pi session can prove freeze/resume continuity.
   tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" >"$boat_freeze_snapshot"
-  boat_freeze_column=$(awk 'index($0,"╲▁▁▁╱"){print index($0,"╲▁▁▁╱"); exit}' "$boat_freeze_snapshot")
+  boat_freeze_cell=$(boat_hull_cell "$boat_freeze_snapshot" || true)
   boat_freeze_sail=$(grep -F '◿│◣' "$boat_freeze_snapshot" | tail -1 || true)
   case "$boat_freeze_sail" in
     *'◿│◣'*) boat_freeze_sail='◿│◣' ;;
     *) fail "could not read the freeze-frame centered asymmetric sail" ;;
   esac
-  [ -n "$boat_freeze_column" ] && [ "$boat_freeze_column" -gt 1 ] \
-    || fail "freeze frame never left the left edge (column '${boat_freeze_column:-empty}')"
+  [ -n "$boat_freeze_cell" ] && [ "$boat_freeze_cell" -gt 0 ] \
+    || fail "freeze frame never left the left edge (cell '${boat_freeze_cell:-empty}')"
 
   # Escape aborts the run, and the abort path removes the ship with no residue.
   # Escape can land while the just-started run is not yet abortable, so retry
@@ -4750,6 +4774,12 @@ JS
     if ! grep -Fq '╲▁▁▁╱' "$boat_cleared_snapshot" &&
       [ "$(grep -Fc 'Operation aborted' "$boat_cleared_snapshot" || true)" -ge 1 ]; then
       break
+    fi
+    # The boat keeps sailing until an Escape lands, and Pi freezes it at the last
+    # painted frame, so follow every complete frame seen before it disappears.
+    if grep -Fq '◿│◣' "$boat_cleared_snapshot"; then
+      boat_seen_cell=$(boat_hull_cell "$boat_cleared_snapshot" || true)
+      [ -n "$boat_seen_cell" ] && boat_freeze_cell=$boat_seen_cell
     fi
     if [ "$((active_screen_wait % 20))" -eq 19 ]; then
       tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" Escape
@@ -4766,13 +4796,13 @@ JS
   # frames quickly so the slow boat cadence cannot advance before the assertion.
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" -l "/calm-boat-e2e"
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" M-s
-  boat_resume_column=""
+  boat_resume_cell=""
   boat_resume_sail=""
   active_screen_wait=0
   while [ "$active_screen_wait" -lt 200 ]; do
     tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" >"$boat_resume_snapshot"
     if grep -Fq '╲▁▁▁╱' "$boat_resume_snapshot"; then
-      boat_resume_column=$(awk 'index($0,"╲▁▁▁╱"){print index($0,"╲▁▁▁╱"); exit}' "$boat_resume_snapshot")
+      boat_resume_cell=$(boat_hull_cell "$boat_resume_snapshot" || true)
       boat_resume_sail=$(grep -F '◿│◣' "$boat_resume_snapshot" | tail -1 || true)
       case "$boat_resume_sail" in
         *'◿│◣'*) boat_resume_sail='◿│◣' ;;
@@ -4782,10 +4812,13 @@ JS
     sleep 0.025
     active_screen_wait=$((active_screen_wait + 1))
   done
-  [ -n "$boat_resume_column" ] \
+  [ -n "$boat_resume_cell" ] \
     || fail "the second working period never showed the working ship"
-  [ "$boat_resume_column" -eq "$boat_freeze_column" ] \
-    || fail "the second working period reset the boat from column $boat_freeze_column to $boat_resume_column instead of resuming"
+  # A move painted in the last poll interval before the abort can escape every
+  # capture, so one cell either way still proves resume, never a reset.
+  boat_resume_offset=$((boat_resume_cell - boat_freeze_cell))
+  [ "${boat_resume_offset#-}" -le 1 ] && [ "$boat_resume_cell" -gt 0 ] \
+    || fail "the second working period reset the boat from cell $boat_freeze_cell to $boat_resume_cell instead of resuming"
   [ "$boat_resume_sail" = "$boat_freeze_sail" ] \
     || fail "the second working period changed sail from $boat_freeze_sail to $boat_resume_sail"
   assert_not_contains "$(cat "$boat_resume_snapshot")" "Working" \
@@ -4863,7 +4896,7 @@ JS
   tmux -L "$TMUX_SOCKET" kill-session -t "$TMUX_SESSION" 2>/dev/null || true
 
   tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 44 \
-    "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
+    "cd '$project' && env FM_HOME='$home' PI_CODING_AGENT_DIR='$config' FM_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi $PI_TUI_MODE_ARGS --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
   wait_for_text "$restarted_snapshot" "CALM_WORKING_E2E_RESPONSE" \
     || fail "Pi did not restore the persisted session after restart"
   assert_not_contains "$(cat "$restarted_snapshot")" "CALM_E2E_OUTPUT" "restart/resume reset Calm and restored a tool row"

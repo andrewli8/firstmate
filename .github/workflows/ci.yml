@@ -493,6 +493,17 @@ jobs:
             exit 1
           }
 
+          # fm_exec_timed must not read an unset BASHPID, which stock Bash 3.2
+          # lacks and set -u turns into an abort before the watchdog starts.
+          timeout_output=$(FM_TEST_ONLY=test_runs_under_system_bash_with_nounset \
+            /bin/bash tests/fm-timeout-lib.test.sh)
+          printf '%s\n' "$timeout_output"
+          timeout_count=$(printf '%s\n' "$timeout_output" | grep -c '^ok - fm_exec_timed runs under /bin/bash 3\.2\.57')
+          [ "$timeout_count" -eq 1 ] || {
+            echo "::error::expected 1 fm_exec_timed bash 3.2 regression, got $timeout_count"
+            exit 1
+          }
+
           backend_output=$(FM_TEST_ONLY=test_backend_source_requires_adapter_file \
             FM_TEST_BASH=/bin/bash \
             /bin/bash tests/fm-backend.test.sh)
