@@ -238,6 +238,12 @@ post-merge pre-push post-rewrite pre-auto-gc sendemail-validate'
 write_env_file() {
   local hooks_dir=$1 out=$2 count=${GIT_CONFIG_COUNT:-0} tmp
   [ -n "$hooks_dir" ] && [ -n "$out" ] || usage
+  # Wrappers drop only an entry naming their own install path, which install
+  # canonicalizes; write the same spelling so a symlinked path still matches.
+  hooks_dir=$(CDPATH='' cd -- "$hooks_dir" 2>/dev/null && pwd -P) || {
+    echo "error: cannot resolve hooks directory $1" >&2
+    return 1
+  }
   case "$count" in
   *[!0-9]*)
     echo "error: invalid inherited GIT_CONFIG_COUNT" >&2

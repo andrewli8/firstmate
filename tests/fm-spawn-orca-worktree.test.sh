@@ -208,6 +208,7 @@ launch_file=$(cat "$1")
 [ ! -e "$launch_file" ] || { echo 'launch file still contains credentials when the worker starts' >&2; exit 1; }
 printf '%s\n' "${GH_TOKEN-unset}" "${GH_CONFIG_DIR-unset}" "${DATABASE_URL-unset}" "${FM_TEST_NOT_SET-unset}" "${FM_TEST_PERSONAL-unset}"
 git config --get-all credential.helper || :
+printf 'hooksPath=%s\n' "$(git config --get core.hooksPath || :)"
 EOF
     value="synthetic-' \$(touch $case_dir/injected) \`false\`"$'\nline\n\n'
     VALUE="$value" python3 - "$case_dir/source.json" <<'PY'
@@ -260,6 +261,8 @@ EOF
       enabled) expected="$value"$'\nscoped-gh\nunset\nunset\nunset\n\n!gh auth git-credential' ;;
       empty) expected=$'unset\nunset\nunset\nunset\nunset' ;;
     esac
+    # The strip-hook entry must also survive the env -i boundary.
+    expected="$expected"$'\n'"hooksPath=$(cd "$home/state" && pwd -P)/$id.git-hooks"
     for pane_shell in /bin/sh /bin/bash /bin/zsh; do
       [ -x "$pane_shell" ] || continue
       (umask 077; printf '%s\n' "$staged_content" > "$staged")

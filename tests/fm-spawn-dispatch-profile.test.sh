@@ -536,8 +536,13 @@ test_launch_preserves_inherited_git_config() {
       *'$('* | *'${'* | *'`'* | *'case '* | *'while '* | *'esac'* | *'done'*)
         fail "the Git configuration launch prefix uses syntax fish cannot parse: $prefix" ;;
     esac
+    # A token check cannot prove fish sources the launch, so report fish as
+    # skipped rather than letting the pass line claim it ran.
+    echo "skip: fish not found (fish pane launch); only a static syntax check ran"
+    pass "launch appends the hooks config while preserving inherited Git credentials in sh, bash and zsh"
+    return
   fi
-  pass "launch appends the hooks config while preserving inherited Git credentials in every pane shell"
+  pass "launch appends the hooks config while preserving inherited Git credentials in every pane shell, fish included"
 }
 
 test_active_dispatch_profile_allows_raw_launch_command() {
