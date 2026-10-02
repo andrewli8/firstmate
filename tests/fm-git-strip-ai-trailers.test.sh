@@ -400,6 +400,36 @@ SH
   pass "the repository's own hook keeps inherited GIT_CONFIG entries such as a scoped credential helper"
 }
 
+# env-file may be handed a symlinked spelling of the hooks directory. The
+# wrapper must still recognise its own entry, or the repository hook is skipped.
+test_env_file_canonicalizes_hooks_dir() {
+  local repo hooks link env_file record
+  repo="$TMP_ROOT/env-file-symlink"
+  make_repo "$repo"
+  record="$TMP_ROOT/env-file-symlink.record"
+  cat >"$repo/.git/hooks/pre-commit" <<SH
+#!/usr/bin/env bash
+git config --get-all credential.helper >"$record"
+SH
+  chmod 700 "$repo/.git/hooks/pre-commit"
+  hooks="$TMP_ROOT/hooks-env-file-symlink"
+  "$STRIP" install "$hooks" "$repo" || fail "install should succeed"
+  link="$TMP_ROOT/hooks-env-file-link"
+  ln -s "$hooks" "$link"
+  env_file="$TMP_ROOT/env-file-symlink.sh"
+  GIT_CONFIG_COUNT=2 "$STRIP" env-file "$link" "$env_file" || fail "env-file should succeed through a symlinked hooks path"
+  printf 'note\n' >>"$repo/README.md"
+  git -C "$repo" add README.md
+  GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0='' \
+    GIT_CONFIG_KEY_1=credential.helper GIT_CONFIG_VALUE_1='!gh auth git-credential' \
+    sh -c '. "$1" && exec git -C "$2" commit -q -m "fix: symlinked hooks path"' _ "$env_file" "$repo" ||
+    fail "commit failed through the symlinked hooks path"
+  [ -f "$record" ] || fail "the repository's pre-commit hook was skipped for a symlinked hooks path"
+  [ "$(cat "$record")" = $'\n!gh auth git-credential' ] ||
+    fail "the repository hook lost the inherited credential helpers for a symlinked hooks path: $(cat "$record")"
+  pass "env-file writes the canonical hooks path so wrappers still chain the repository hook"
+}
+
 test_strip_msgfile_alone_does_not_rewrite_author_fields() {
   local msg
   msg="$TMP_ROOT/msg.txt"
@@ -426,6 +456,7 @@ test_valueless_project_hookspath_still_refuses
 test_repository_pre_push_runs_on_every_override_channel
 test_git_c_override_still_strips_and_chains_commit_hooks
 test_repository_hook_keeps_inherited_git_config
+test_env_file_canonicalizes_hooks_dir
 test_strip_msgfile_alone_does_not_rewrite_author_fields
 
 echo "# all fm-git-strip-ai-trailers tests passed"
