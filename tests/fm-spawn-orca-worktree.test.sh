@@ -295,13 +295,14 @@ EOF
   done
 }
 
-# A spawn that fails after Orca accepted the launch, with the terminal still
-# open, must not leave snapshotted credentials behind when the pane never ran
-# the source command. The fake Orca accepts input without executing it, and a
-# failed backlog transition aborts the spawn after delivery.
-test_orca_failed_spawn_removes_an_unsourced_launch_file() {
+# A spawn that fails after Orca accepted the launch leaves the terminal open,
+# and that pane may still be about to source the launch file, so abort cleanup
+# must not delete it out from under the pending source. The fake Orca accepts
+# input without executing it, and a failed backlog transition aborts the spawn
+# after delivery.
+test_orca_failed_spawn_keeps_the_launch_file_for_a_live_terminal() {
   local case_dir home id=orca-env-unsourced fb out status staged real_axi
-  real_axi=$(command -v tasks-axi) || { pass "skipped unsourced launch cleanup (tasks-axi is not installed)"; return 0; }
+  real_axi=$(command -v tasks-axi) || { pass "skipped live-terminal launch file case (tasks-axi is not installed)"; return 0; }
   case_dir="$TMP_ROOT/$id"
   home="$case_dir/home"
   mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
@@ -343,8 +344,9 @@ SH
   assert_contains "$out" "could not be moved to In flight" "the spawn did not fail at the backlog transition"
   staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
-  [ ! -e "$staged" ] || fail "a failed spawn left snapshotted credentials in $staged"
-  pass "a failed Orca spawn removes an accepted but unsourced credential launch file"
+  [ -f "$staged" ] || fail "abort cleanup deleted the launch file a live Orca terminal was sent to source: $staged"
+  rm -f -- "$staged"
+  pass "a failed Orca spawn keeps the delivered launch file while its terminal stays open"
 }
 
 # Without a configured source, a nonempty allowlist on Orca still resolves from
@@ -463,7 +465,7 @@ PY
 test_orca_source_preserves_values_without_utf8_locale
 test_orca_launch_uses_controlled_tmux_environment
 test_orca_allowlist_without_source_warns
-test_orca_failed_spawn_removes_an_unsourced_launch_file
+test_orca_failed_spawn_keeps_the_launch_file_for_a_live_terminal
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run
 
