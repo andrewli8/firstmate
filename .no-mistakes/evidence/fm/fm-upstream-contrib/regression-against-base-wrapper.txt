@@ -1,0 +1,4 @@
+ok - a valueless project core.hooksPath still refuses the commit
+ok - the repository's pre-push runs and can refuse under every hooksPath override channel
+ok - a git -c hooksPath override still strips the trailer and chains the project's hooks
+not ok - the repository hook lost the inherited credential helpers with the hooksPath entry last: 
