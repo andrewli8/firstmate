@@ -53,6 +53,15 @@ wait_for_text() {
   return 1
 }
 
+# Prints how many terminal cells precede the last working-ship hull in a capture,
+# counting UTF-8 lead bytes so the result is the same in any locale.
+boat_hull_cell() {
+  local hull_line
+  hull_line=$(grep -F '╲▁▁▁╱' "$1" | tail -1)
+  [ -n "$hull_line" ] || return 1
+  printf '%s' "${hull_line%%╲▁▁▁╱*}" | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' '
+}
+
 # Pi 1.0.0 defaults its TUI to a fullscreen alternate-screen mode whose scrollable
 # transcript is application-owned: rows that leave the viewport stay reachable
 # through Pi's own scroll keys but never enter terminal scrollback, so
@@ -3958,7 +3967,7 @@ SH
 }
 
 test_interactive_terminal_e2e() {
-  local project config home session_file export_file export_dom default_snapshot expanded_snapshot hidden_snapshot active_before_snapshot active_hidden_snapshot export_snapshot export_settled_snapshot restored_snapshot working_snapshot working_response_snapshot restarted_snapshot resumed_restored_snapshot hash_before hash_after now version chrome chrome_report active_wait active_screen_wait boat_frame_one boat_frame_two boat_resized_snapshot boat_focus_snapshot boat_cleared_snapshot boat_hull_line boat_sail_line boat_column_one boat_column_two boat_line boat_color_snapshot boat_color_line boat_water_snapshot boat_water_line boat_water_first boat_water_changed boat_narrow_snapshot boat_freeze_snapshot boat_resume_snapshot boat_freeze_column boat_freeze_sail boat_resume_column boat_resume_sail boat_seen_column boat_freeze_step boat_resume_offset
+  local project config home session_file export_file export_dom default_snapshot expanded_snapshot hidden_snapshot active_before_snapshot active_hidden_snapshot export_snapshot export_settled_snapshot restored_snapshot working_snapshot working_response_snapshot restarted_snapshot resumed_restored_snapshot hash_before hash_after now version chrome chrome_report active_wait active_screen_wait boat_frame_one boat_frame_two boat_resized_snapshot boat_focus_snapshot boat_cleared_snapshot boat_hull_line boat_sail_line boat_column_one boat_column_two boat_line boat_color_snapshot boat_color_line boat_water_snapshot boat_water_line boat_water_first boat_water_changed boat_narrow_snapshot boat_freeze_snapshot boat_resume_snapshot boat_freeze_cell boat_freeze_sail boat_resume_cell boat_resume_sail boat_seen_cell boat_resume_offset
   if ! command -v pi >/dev/null 2>&1 || ! command -v tmux >/dev/null 2>&1; then
     echo "skip: pi or tmux not found for Pi calm interactive E2E"
     return 0
@@ -4746,19 +4755,18 @@ JS
   # Capture the last on-screen column and sail before settling so the next working
   # period in this same Pi session can prove freeze/resume continuity.
   tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" >"$boat_freeze_snapshot"
-  boat_freeze_column=$(awk 'index($0,"╲▁▁▁╱"){print index($0,"╲▁▁▁╱"); exit}' "$boat_freeze_snapshot")
+  boat_freeze_cell=$(boat_hull_cell "$boat_freeze_snapshot" || true)
   boat_freeze_sail=$(grep -F '◿│◣' "$boat_freeze_snapshot" | tail -1 || true)
   case "$boat_freeze_sail" in
     *'◿│◣'*) boat_freeze_sail='◿│◣' ;;
     *) fail "could not read the freeze-frame centered asymmetric sail" ;;
   esac
-  [ -n "$boat_freeze_column" ] && [ "$boat_freeze_column" -gt 1 ] \
-    || fail "freeze frame never left the left edge (column '${boat_freeze_column:-empty}')"
+  [ -n "$boat_freeze_cell" ] && [ "$boat_freeze_cell" -gt 0 ] \
+    || fail "freeze frame never left the left edge (cell '${boat_freeze_cell:-empty}')"
 
   # Escape aborts the run, and the abort path removes the ship with no residue.
   # Escape can land while the just-started run is not yet abortable, so retry
   # until pi records the abort instead of assuming one keypress sufficed.
-  boat_freeze_step=""
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" Escape
   active_screen_wait=0
   while [ "$active_screen_wait" -lt 200 ]; do
@@ -4768,14 +4776,10 @@ JS
       break
     fi
     # The boat keeps sailing until an Escape lands, and Pi freezes it at the last
-    # painted frame, so follow every complete frame seen before it disappears and
-    # remember the size of its last observed move.
+    # painted frame, so follow every complete frame seen before it disappears.
     if grep -Fq '◿│◣' "$boat_cleared_snapshot"; then
-      boat_seen_column=$(awk 'index($0,"╲▁▁▁╱"){c=index($0,"╲▁▁▁╱")} END{print c}' "$boat_cleared_snapshot")
-      if [ -n "$boat_seen_column" ] && [ "$boat_seen_column" -ne "$boat_freeze_column" ]; then
-        boat_freeze_step=$((boat_seen_column - boat_freeze_column))
-        boat_freeze_column=$boat_seen_column
-      fi
+      boat_seen_cell=$(boat_hull_cell "$boat_cleared_snapshot" || true)
+      [ -n "$boat_seen_cell" ] && boat_freeze_cell=$boat_seen_cell
     fi
     if [ "$((active_screen_wait % 20))" -eq 19 ]; then
       tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" Escape
@@ -4792,13 +4796,13 @@ JS
   # frames quickly so the slow boat cadence cannot advance before the assertion.
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" -l "/calm-boat-e2e"
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" M-s
-  boat_resume_column=""
+  boat_resume_cell=""
   boat_resume_sail=""
   active_screen_wait=0
   while [ "$active_screen_wait" -lt 200 ]; do
     tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" >"$boat_resume_snapshot"
     if grep -Fq '╲▁▁▁╱' "$boat_resume_snapshot"; then
-      boat_resume_column=$(awk 'index($0,"╲▁▁▁╱"){print index($0,"╲▁▁▁╱"); exit}' "$boat_resume_snapshot")
+      boat_resume_cell=$(boat_hull_cell "$boat_resume_snapshot" || true)
       boat_resume_sail=$(grep -F '◿│◣' "$boat_resume_snapshot" | tail -1 || true)
       case "$boat_resume_sail" in
         *'◿│◣'*) boat_resume_sail='◿│◣' ;;
@@ -4808,15 +4812,13 @@ JS
     sleep 0.025
     active_screen_wait=$((active_screen_wait + 1))
   done
-  [ -n "$boat_resume_column" ] \
+  [ -n "$boat_resume_cell" ] \
     || fail "the second working period never showed the working ship"
   # A move painted in the last poll interval before the abort can escape every
-  # capture, so one observed step either way still proves resume, never a reset.
-  boat_resume_offset=$((boat_resume_column - boat_freeze_column))
-  [ "$boat_resume_offset" -eq 0 ] ||
-    { [ -n "$boat_freeze_step" ] && [ "${boat_resume_offset#-}" -eq "${boat_freeze_step#-}" ] &&
-      [ "$((boat_freeze_column - ${boat_freeze_step#-}))" -gt 1 ]; } \
-    || fail "the second working period reset the boat from column $boat_freeze_column to $boat_resume_column instead of resuming"
+  # capture, so one cell either way still proves resume, never a reset.
+  boat_resume_offset=$((boat_resume_cell - boat_freeze_cell))
+  [ "${boat_resume_offset#-}" -le 1 ] && [ "$boat_resume_cell" -gt 0 ] \
+    || fail "the second working period reset the boat from cell $boat_freeze_cell to $boat_resume_cell instead of resuming"
   [ "$boat_resume_sail" = "$boat_freeze_sail" ] \
     || fail "the second working period changed sail from $boat_freeze_sail to $boat_resume_sail"
   assert_not_contains "$(cat "$boat_resume_snapshot")" "Working" \
