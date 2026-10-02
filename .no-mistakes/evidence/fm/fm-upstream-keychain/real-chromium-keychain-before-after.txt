@@ -1,0 +1,11 @@
+# render_export_dom with real Chromium 135.0.7013.0 on macOS (private HOME per attempt)
+
+## WITH fix (--use-mock-keychain --password-store=basic)
+render_status=0 seconds=8
+<h1>calm export</h1>
+SecurityAgent (keychain dialog) during run: none
+
+## WITHOUT fix (flags removed, base behavior)
+SecurityAgent (keychain dialog) during run: 70571 SecurityAgent (not running before launch)
+chrome=/opt/homebrew/bin/chromium chrome_version=Chromium 135.0.7013.0  pi=real; attempt 1: exit=137 timed_out=yes bytes=0 stderr= attempt 2: exit=137 timed_out=yes bytes=0 stderr= attempt 3: exit=137 timed_out=yes bytes=0 stderr= render_status=1 seconds=249
+

@@ -1,0 +1,1 @@
+ok - the rendered-export-DOM guard renders in one pass with the macOS keychain disabled, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails
