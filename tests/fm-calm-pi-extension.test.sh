@@ -3877,6 +3877,7 @@ test_export_dom_render_guard() {
 #!/bin/sh
 case "${1:-}" in --version) echo "FakeChrome 1.2.3"; exit 0 ;; esac
 echo attempt >>"$FM_FAKE_CHROME_ATTEMPTS"
+printf '%s\n' "$@" >"$FM_FAKE_CHROME_ARGS"
 printf '<html><head></head><body>export</body></html>\n'
 SH
   cat >"$dir/chrome-flaky" <<'SH'
@@ -3906,13 +3907,19 @@ SH
   chmod +x "$dir/chrome-ok" "$dir/chrome-flaky" "$dir/chrome-broken" "$dir/chrome-hang"
 
   : >"$dir/attempts-ok"
-  FM_FAKE_CHROME_ATTEMPTS="$dir/attempts-ok" \
+  FM_FAKE_CHROME_ATTEMPTS="$dir/attempts-ok" FM_FAKE_CHROME_ARGS="$dir/args-ok" \
     render_export_dom "$dir/chrome-ok" "$source_file" "$out_file" 9.9.9 >"$dir/report-ok" \
     || fail "render_export_dom rejected a Chrome that dumped a complete DOM"
   grep -Fq '</html>' "$out_file" || fail "render_export_dom did not leave the rendered DOM behind"
   [ "$(wc -l <"$dir/attempts-ok")" -eq 1 ] \
     || fail "render_export_dom retried a Chrome that had already rendered the DOM"
   [ ! -s "$dir/report-ok" ] || fail "render_export_dom reported a diagnostic for a successful render"
+  # Without these flags macOS opens a "Keychain Not Found" dialog for the
+  # private HOME on every run.
+  grep -Fxq -- '--use-mock-keychain' "$dir/args-ok" \
+    || fail "render_export_dom launched Chrome without --use-mock-keychain"
+  grep -Fxq -- '--password-store=basic' "$dir/args-ok" \
+    || fail "render_export_dom launched Chrome without --password-store=basic"
 
   : >"$dir/attempts-flaky"
   : >"$out_file"
@@ -3953,7 +3960,7 @@ SH
   assert_contains "$report" "timed_out=yes" \
     "the render failure reported its own kill signal without saying the attempt was timed out"
 
-  pass "the rendered-export-DOM guard renders in one pass, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails"
+  pass "the rendered-export-DOM guard renders in one pass with the macOS keychain disabled, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails"
 }
 
 test_interactive_terminal_e2e() {
