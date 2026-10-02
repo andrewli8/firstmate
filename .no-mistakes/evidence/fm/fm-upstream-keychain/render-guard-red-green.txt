@@ -1,0 +1,7 @@
+$ bash tests/fm-calm-pi-extension.test.sh  (only test_export_dom_render_guard, target commit)
+ok - the rendered-export-DOM guard renders in one pass with the macOS keychain disabled, retries a bounded number of Chrome start-up failures, and reports the Chrome binary, Chrome version, Pi version, exit status, and Chrome diagnostic when every attempt fails
+exit=0
+
+$ same test with --use-mock-keychain/--password-store=basic removed from render_export_dom (negative control)
+not ok - render_export_dom launched Chrome without --use-mock-keychain
+exit=1

@@ -1,0 +1,8 @@
+chrome: /opt/homebrew/bin/chromium (Chromium 135.0.7013.0 ) on Darwin 24.6.0
+render_export_dom: ok in 13s
+rendered DOM:
+<html><head></head><body data-rendered="yes"><p id="calm">calm export</p><script>document.body.dataset.rendered="yes"</script>
+</body></html>
+private HOME contents (keychain artifacts?):
+  keychain entries found: 0
+Chrome stderr keychain mentions: 0
