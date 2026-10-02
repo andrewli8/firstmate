@@ -4770,13 +4770,9 @@ JS
       # The boat keeps sailing until an Escape lands, so refresh the freeze frame
       # right before each resend and keep the last frame that still shows it.
       tmux -L "$TMUX_SOCKET" capture-pane -p -t "$TMUX_SESSION" >"$boat_resume_snapshot"
-      if grep -Fq '╲▁▁▁╱' "$boat_resume_snapshot"; then
+      if grep -Fq '╲▁▁▁╱' "$boat_resume_snapshot" && grep -Fq '◿│◣' "$boat_resume_snapshot"; then
         cp "$boat_resume_snapshot" "$boat_freeze_snapshot"
         boat_freeze_column=$(awk 'index($0,"╲▁▁▁╱"){print index($0,"╲▁▁▁╱"); exit}' "$boat_freeze_snapshot")
-        boat_freeze_sail=$(grep -F '◿│◣' "$boat_freeze_snapshot" | tail -1 || true)
-        case "$boat_freeze_sail" in
-          *'◿│◣'*) boat_freeze_sail='◿│◣' ;;
-        esac
       fi
       tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" Escape
     fi

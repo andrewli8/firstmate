@@ -396,7 +396,10 @@ fmx_request_relay_context() {
 
 fmx_context_registry_mtime() {
   local file=$1 mtime
-  mtime=$(/usr/bin/stat -f '%m' "$file" 2>/dev/null) || mtime=$(stat -c '%Y' "$file" 2>/dev/null) || return 1
+  mtime=$(stat -c '%Y' "$file" 2>/dev/null) || mtime=
+  case "$mtime" in
+    ''|*[!0-9]*) mtime=$(/usr/bin/stat -f '%m' "$file" 2>/dev/null) || return 1 ;;
+  esac
   case "$mtime" in
     ''|*[!0-9]*) return 1 ;;
   esac

@@ -1913,6 +1913,34 @@ test_private_artifact_publisher_runs_under_system_bash() {
   pass "private artifact publisher is compatible with the system bash path"
 }
 
+test_context_registry_mtime_reads_gnu_and_bsd_stat() {
+  local home file fakebin out
+  home="$TMP_ROOT/registry-mtime"
+  mkdir -p "$home"
+  file="$home/req-legacy.json"
+  : > "$file"
+  TZ=UTC touch -t 202001010000 "$file"
+  out=$(bash -c '. "$1/bin/fm-x-lib.sh"; fmx_context_registry_mtime "$2"' _ "$ROOT" "$file") \
+    || fail "the registry mtime read failed with the host stat"
+  [ "$out" = 1577836800 ] || fail "the registry mtime read '$out' with the host stat instead of 1577836800"
+  # GNU stat treats -f as filesystem mode: it prints '?' for %m and still exits 0.
+  fakebin=$(fm_fakebin "$home")
+  cat > "$fakebin/stat" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+  -f) printf '?\n' ;;
+  -c) [ "$2" = '%Y' ] || exit 1
+    /usr/bin/stat -c '%Y' "$3" 2>/dev/null || /usr/bin/stat -f '%m' "$3" ;;
+  *) exit 1 ;;
+esac
+SH
+  chmod +x "$fakebin/stat"
+  out=$(PATH="$fakebin:$PATH" bash -c '. "$1/bin/fm-x-lib.sh"; fmx_context_registry_mtime "$2"' _ "$ROOT" "$file") \
+    || fail "the registry mtime read failed with GNU stat semantics"
+  [ "$out" = 1577836800 ] || fail "the registry mtime read '$out' with GNU stat semantics instead of 1577836800"
+  pass "the context registry reads file mtimes with GNU and BSD stat"
+}
+
 test_context_registry_prunes_expired_records() {
   local home dir fakebin keep preserved legacy malformed future out rc
   home="$TMP_ROOT/registry-retention"
@@ -3231,6 +3259,7 @@ test_poll_records_context_registry_from_relay_platform
 test_context_registry_private_publication_rejects_unsafe_paths
 test_context_registry_rejects_unsafe_reads
 test_private_artifact_publisher_runs_under_system_bash
+test_context_registry_mtime_reads_gnu_and_bsd_stat
 test_context_registry_prunes_expired_records
 test_context_registry_preserves_first_seen_timestamp
 test_context_registry_retention_starts_on_successful_live_answer
