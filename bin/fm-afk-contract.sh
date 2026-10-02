@@ -239,8 +239,10 @@ fm_afk_contract_usage() {
   sed -n '/^# Usage:/,/^# CROSS-SUBSYSTEM LOCK/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'
 }
 
-fm_afk_contract_now_iso() {
-  date -u +%Y-%m-%dT%H:%M:%SZ
+# One clock read formats both stamps, so entered and entered_epoch name the
+# same second even when the read lands on a second boundary.
+fm_afk_contract_epoch_iso() {  # <epoch>
+  date -u -d "@$1" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$1" +%Y-%m-%dT%H:%M:%SZ
 }
 
 # --- record writing ---------------------------------------------------------
@@ -523,8 +525,8 @@ fm_afk_contract_cmd_enter() {
     fm_afk_contract_render_readback "$record"
     return
   fi
-  now=$(fm_afk_contract_now_iso)
   now_epoch=$(date +%s)
+  now=$(fm_afk_contract_epoch_iso "$now_epoch") || return 1
   session_entered=$now
   session_entered_epoch=$now_epoch
   # A replacement carries the session entry forward; quiet mode becoming the
