@@ -1,0 +1,24 @@
+Pane inherits GIT_CONFIG_COUNT=2: credential.helper='' (reset), credential.helper='!gh auth git-credential'.
+System gitconfig on this Mac sets credential.helper=osxkeychain. Git uses helpers after the last empty reset.
+
+### BEFORE (base 8690c411 prefix: export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath ...)
+effective credential.helper list (git config --get-all): osxkeychain
+core.hooksPath: $TMP/hooks
+=> scoped helper and reset dropped; git falls back to osxkeychain (personal credentials).
+
+### AFTER (this branch prefix: fm-git-strip-ai-trailers.sh env-file ... && . env-file)
+env-file: export GIT_CONFIG_KEY_2=core.hooksPath GIT_CONFIG_VALUE_2='$TMP/hooks' GIT_CONFIG_COUNT=3
+effective credential.helper list (git config --get-all): osxkeychain,<empty reset>,!gh auth git-credential
+core.hooksPath: $TMP/hooks
+=> reset + scoped helper kept (osxkeychain is cleared by the reset); hooks path appended at index 2.
+
+### AFTER, leading-zero count GIT_CONFIG_COUNT=02
+export GIT_CONFIG_KEY_2=core.hooksPath GIT_CONFIG_VALUE_2='$TMP/hooks' GIT_CONFIG_COUNT=3
+
+### AFTER, unusable counts refused with visible error
+GIT_CONFIG_COUNT=bad:
+error: invalid inherited GIT_CONFIG_COUNT
+exit=1
+GIT_CONFIG_COUNT=2147483647:
+error: inherited GIT_CONFIG_COUNT cannot be extended
+exit=1
