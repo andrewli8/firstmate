@@ -440,13 +440,20 @@ try:
                     raise AssertionError('tmux source corrupted the synthetic value: locale='+locale+', shell='+shell)
         raw_assignments = subprocess.run(['bash', '-c', snapshot, '_', adapter, 'FM_TEST_RAW'], env=source_env,
                                          capture_output=True, check=True, timeout=10).stdout
+        # tmux versions differ on invalid UTF-8, so compare against the exact
+        # bytes this tmux reports rather than the bytes that were set.
+        record = subprocess.run(['tmux', '-u', 'show-environment', '-t', '=scoped-source', 'FM_TEST_RAW'],
+                                env=source_env, capture_output=True, check=True, timeout=10).stdout
+        if not record.startswith(b'FM_TEST_RAW=') or not record.endswith(b'\n'):
+            raise AssertionError('real tmux did not report the synthetic raw value')
+        reported = record[len(b'FM_TEST_RAW='):-1]
         for shell in ['sh', 'bash', 'zsh']:
             if shell == 'zsh' and not shutil.which(shell):
                 continue
             observed = subprocess.run([shell, '-c', b'export '+raw_assignments+b'; printf %s "$FM_TEST_RAW"'], env=env,
                                       capture_output=True, check=True, timeout=10).stdout
-            if observed != raw:
-                raise AssertionError('tmux source altered non-UTF-8 bytes: locale='+locale+', shell='+shell)
+            if observed != reported:
+                raise AssertionError('tmux source altered the bytes tmux reported: locale='+locale+', shell='+shell)
         for names in ['FM_TEST_ABSENT', 'FM_TEST_PHANTOM']:
             result = subprocess.run(['bash', '-c', snapshot, '_', adapter, names],
                                     env=source_env, capture_output=True, text=True, timeout=10)
@@ -459,7 +466,7 @@ finally:
                    capture_output=True, timeout=10, check=False)
 PY
   then fail "real-tmux source must preserve exact values and refuse missing names"; fi
-  pass "real tmux preserves absent/C locale values and non-UTF-8 bytes, rejects missing/phantom names and excludes the automatic SSH agent"
+  pass "real tmux preserves absent/C locale values and reported raw bytes, rejects missing/phantom names and excludes the automatic SSH agent"
 }
 
 test_orca_source_preserves_values_without_utf8_locale
