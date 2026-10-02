@@ -67,8 +67,10 @@ function read(name) {
   // Without -u, tmux sanitizes values when the client lacks a UTF-8 locale.
   const args = ["-u", "show-environment", "-t", `=${session}`];
   if (name !== undefined) args.push(name);
+  // latin1 maps each byte to one code unit, so values that are not valid UTF-8
+  // reach the launch file byte for byte instead of as replacement characters.
   const result = spawnSync("tmux", args, {
-    encoding: "utf8", timeout: 10000, maxBuffer: 4 * 1024 * 1024,
+    encoding: "latin1", timeout: 10000, maxBuffer: 4 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) refuse(name);
   return result.stdout;
@@ -90,7 +92,7 @@ for (const name of new Set(names.split("\n").filter(Boolean))) {
   if (value.includes("\0")) refuse(name);
   assignments.push(`${name}='${value.replace(/'/g, "'\\''")}'`);
 }
-process.stdout.write(assignments.join(" "));
+process.stdout.write(assignments.join(" "), "latin1");
 JS
 }
 

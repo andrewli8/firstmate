@@ -1394,8 +1394,10 @@ spawn_abort_cleanup() {
     fm_lock_release "$SPAWN_CONTROL_LOCK" || true
   fi
   [ -z "$SPAWN_META_TMP" ] || rm -f "$SPAWN_META_TMP" 2>/dev/null || true
-  if [ "$status" -ne 0 ] && [ "${ORCA_LAUNCH_ENV_ENABLED:-0}" = 1 ] && [ -n "$SPAWN_STAGED_LAUNCH_FILE" ] &&
-    { [ "$SPAWN_LAUNCH_SENT" = 0 ] || [ "$SPAWN_ENDPOINT_CLOSED" = 1 ]; }; then
+  # Unlike the hook strip below, this ignores whether the terminal is still
+  # open: a pane already sourcing holds the file open and unlinks it itself, so
+  # removal only stops a failed spawn's unsourced credentials from lingering.
+  if [ "$status" -ne 0 ] && [ "${ORCA_LAUNCH_ENV_ENABLED:-0}" = 1 ] && [ -n "$SPAWN_STAGED_LAUNCH_FILE" ]; then
     rm -f -- "$SPAWN_STAGED_LAUNCH_FILE" 2>/dev/null || true
   fi
   if [ "$CONFIG_INHERIT_LOCK_HELD" = 1 ]; then
