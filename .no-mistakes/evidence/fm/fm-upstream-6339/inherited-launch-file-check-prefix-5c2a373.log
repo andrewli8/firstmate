@@ -1,0 +1,2 @@
+spawn exit=1 output: error: another spawn is already creating task orca-inherit
+FAIL: inherited LAUNCH_FILE was deleted

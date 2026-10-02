@@ -1,0 +1,2 @@
+spawn exit=1 output: error: another spawn is already creating task orca-inherit
+PASS: inherited LAUNCH_FILE /tmp/fm-inherit.3Ha5Yt/caller-owned-file survived the abort
