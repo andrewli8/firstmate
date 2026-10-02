@@ -216,12 +216,15 @@ EOF
 }
 
 dir_mode() {
-  local path=$1
-  if /usr/bin/stat -f %Lp "$path" >/dev/null 2>&1; then
-    /usr/bin/stat -f %Lp "$path"
-  else
-    stat -c %a "$path"
-  fi
+  local path=$1 mode
+  mode=$(stat -c %a "$path" 2>/dev/null) || mode=
+  case "$mode" in
+    ''|*[!0-9]*) mode=$(/usr/bin/stat -f %Lp "$path" 2>/dev/null) || return 1 ;;
+  esac
+  case "$mode" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  printf '%s\n' "$mode"
 }
 
 global_git_snapshot() {
