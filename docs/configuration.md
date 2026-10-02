@@ -962,7 +962,7 @@ The source requires `config/launch-env-allowlist` and reads only its names from 
 A listed name missing from the session, an unreadable session, or a malformed selector stops the spawn before Orca creates the worktree or terminal; a name removed with `tmux set-environment -r` stays deliberately unset.
 Source mode also sets `GIT_CONFIG_NOSYSTEM=1`, so a system Git credential helper cannot answer with personal credentials.
 Values travel only in the owner-only staged launch file, never terminal input, and the pane deletes that file before the worker starts.
-Only fresh Orca spawns use the source; a relaunch keeps destination expansion without the warning.
+The source applies to fresh Orca spawns; `--relaunch` is refused on Orca because it has no recovery-grade agent-state classifier.
 The selector is not inherited into secondmate homes, and other backends ignore it.
 [`fm-spawn.sh --help`](../bin/fm-spawn.sh) owns the snapshot and launch-file mechanics.
 Project and harness sandbox settings still own filesystem access to personal credential stores.
