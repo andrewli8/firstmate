@@ -295,6 +295,58 @@ EOF
   done
 }
 
+# A spawn that fails after Orca accepted the launch, with the terminal still
+# open, must not leave snapshotted credentials behind when the pane never ran
+# the source command. The fake Orca accepts input without executing it, and a
+# failed backlog transition aborts the spawn after delivery.
+test_orca_failed_spawn_removes_an_unsourced_launch_file() {
+  local case_dir home id=orca-env-unsourced fb out status staged real_axi
+  real_axi=$(command -v tasks-axi) || { pass "skipped unsourced launch cleanup (tasks-axi is not installed)"; return 0; }
+  case_dir="$TMP_ROOT/$id"
+  home="$case_dir/home"
+  mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+  touch "$home/state/.last-watcher-beat"
+  printf 'codex\n' > "$home/config/crew-harness"
+  printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+  printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+  printf '%s\n' '# Backlog' '' '## In flight' '' '## Queued' '' '## Done' > "$home/data/backlog.md"
+  printf 'backend = "markdown"\n\n[markdown]\npath = "data/backlog.md"\n' > "$home/.tasks.toml"
+  "$real_axi" add "$id" "item for $id" --kind ship --file "$home/data/backlog.md" >/dev/null
+  fm_git_init_commit "$case_dir/project"
+  cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise a failed Orca spawn after launch delivery.
+
+## Firstmate spec
+Confirm the staged credential file does not outlive the failed spawn.
+EOF
+  fb=$(make_orca_fakebin "$case_dir")
+  printf '#!/bin/sh\necho "GH_TOKEN=synthetic-token"\n' > "$fb/tmux"
+  cat > "$fb/tasks-axi" <<SH
+#!/usr/bin/env bash
+if [ "\${1:-}" = start ]; then
+  echo 'error: "backlog is unwritable"' >&2
+  exit 1
+fi
+exec "$real_axi" "\$@"
+SH
+  chmod +x "$fb/tmux" "$fb/tasks-axi"
+  out=$(FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+    FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+    FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+    FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
+    FM_TEST_ORCA_LOG="$case_dir/terminal.log" PATH="$fb:$PATH" \
+    "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
+  status=$?
+  [ "$status" -ne 0 ] || fail "a spawn whose backlog transition failed reported success: $out"
+  assert_contains "$out" "could not be moved to In flight" "the spawn did not fail at the backlog transition"
+  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
+  [ ! -e "$staged" ] || fail "a failed spawn left snapshotted credentials in $staged"
+  pass "a failed Orca spawn removes an accepted but unsourced credential launch file"
+}
+
 # Without a configured source, a nonempty allowlist on Orca still resolves from
 # the Orca terminal; the spawn proceeds unchanged but says so on stderr.
 test_orca_allowlist_without_source_warns() {
@@ -361,6 +413,9 @@ try:
           '-s', 'scoped-source', 'sleep 60'], dict(env, SSH_AUTH_SOCK='/tmp/fm-test-personal-agent'))
     call([tmux, '-S', socket, 'set-environment', '-t', '=scoped-source', 'GH_TOKEN', value])
     call([tmux, '-S', socket, 'set-environment', '-r', '-t', '=scoped-source', 'FM_TEST_NOT_SET'])
+    raw = b"synthetic-\xff\xfe-'not-utf8"
+    subprocess.run([tmux, '-S', socket, 'set-environment', '-t', '=scoped-source', 'FM_TEST_RAW', raw],
+                   env=env, check=True, timeout=10)
     call([tmux, '-S', socket, 'set-environment', '-g', 'FM_TEST_ABSENT', 'personal-global'])
     if call([tmux, '-u', '-S', socket, 'show-environment', '-t', '=scoped-source', 'SSH_AUTH_SOCK']) != 'SSH_AUTH_SOCK=/tmp/fm-test-personal-agent\n':
         raise AssertionError('real tmux did not automatically populate the synthetic personal agent')
@@ -381,6 +436,15 @@ try:
                 observed = call([shell, '-c', 'export '+assignments+'; test "${SSH_AUTH_SOCK-unset}" = unset && test "${FM_TEST_NOT_SET-unset}" = unset && printf %s "$GH_TOKEN"'], env)
                 if observed != value:
                     raise AssertionError('tmux source corrupted the synthetic value: locale='+locale+', shell='+shell)
+        raw_assignments = subprocess.run(['bash', '-c', snapshot, '_', adapter, 'FM_TEST_RAW'], env=source_env,
+                                         capture_output=True, check=True, timeout=10).stdout
+        for shell in ['sh', 'bash', 'zsh']:
+            if shell == 'zsh' and not shutil.which(shell):
+                continue
+            observed = subprocess.run([shell, '-c', b'export '+raw_assignments+b'; printf %s "$FM_TEST_RAW"'], env=env,
+                                      capture_output=True, check=True, timeout=10).stdout
+            if observed != raw:
+                raise AssertionError('tmux source altered non-UTF-8 bytes: locale='+locale+', shell='+shell)
         for names in ['FM_TEST_ABSENT', 'FM_TEST_PHANTOM']:
             result = subprocess.run(['bash', '-c', snapshot, '_', adapter, names],
                                     env=source_env, capture_output=True, text=True, timeout=10)
@@ -393,12 +457,13 @@ finally:
                    capture_output=True, timeout=10, check=False)
 PY
   then fail "real-tmux source must preserve exact values and refuse missing names"; fi
-  pass "real tmux preserves absent/C locale values, rejects missing/phantom names and excludes the automatic SSH agent"
+  pass "real tmux preserves absent/C locale values and non-UTF-8 bytes, rejects missing/phantom names and excludes the automatic SSH agent"
 }
 
 test_orca_source_preserves_values_without_utf8_locale
 test_orca_launch_uses_controlled_tmux_environment
 test_orca_allowlist_without_source_warns
+test_orca_failed_spawn_removes_an_unsourced_launch_file
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run
 
