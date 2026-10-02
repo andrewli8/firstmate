@@ -125,7 +125,9 @@ render_export_dom() {
     # the same document in about a second. macOS derives its profile directory
     # from ~/Library regardless of HOME, so Darwin keeps the explicit
     # --user-data-dir that was this file's original isolation. Either way each
-    # attempt starts from the fresh directory removed just above.
+    # attempt starts from the fresh directory removed just above. The private
+    # HOME has no login keychain, so the mock keychain and basic password store
+    # keep macOS from prompting to create one; Linux ignores both switches.
     case "$(uname -s)" in
       Darwin) profile_arg=(--user-data-dir="$profile") ;;
       *) profile_arg=() ;;
@@ -138,6 +140,8 @@ render_export_dom() {
       --no-sandbox \
       --disable-dev-shm-usage \
       --disable-background-networking \
+      --use-mock-keychain \
+      --password-store=basic \
       --virtual-time-budget=2000 \
       --dump-dom \
       "file://$source_file" >"$out_file" 2>"$log" &
