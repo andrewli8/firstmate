@@ -248,8 +248,8 @@ EOF
     expect_code 0 "$status" "controlled-source spawn should succeed: $out"
     staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
     [ -f "$staged" ] || fail "Orca did not receive the staged launch path"
-    [ "$(stat -f '%Lp' "$staged" 2>/dev/null || stat -c '%a' "$staged")" = 600 ] || fail "credential launch file is not private"
-    [ "$(stat -f '%Lp' "$(dirname "$staged")" 2>/dev/null || stat -c '%a' "$(dirname "$staged")")" = 700 ] || fail "credential launch directory is not private"
+    [ "$(stat -c '%a' "$staged" 2>/dev/null || stat -f '%Lp' "$staged")" = 600 ] || fail "credential launch file is not private"
+    [ "$(stat -c '%a' "$(dirname "$staged")" 2>/dev/null || stat -f '%Lp' "$(dirname "$staged")")" = 700 ] || fail "credential launch directory is not private"
     assert_not_contains "$(cat "$case_dir/terminal.log")" synthetic "source values leaked into terminal input"
     staged_content=$(cat "$staged")
     printf '%s\n' "$staged" > "$case_dir/stage-path"
