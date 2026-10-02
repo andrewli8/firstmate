@@ -1,0 +1,29 @@
+== GNU stat (coreutils gstat as 'stat') on the BSD-first form the old code used ==
+$ stat --version | head -1
+stat (GNU coreutils) 9.9
+$ stat -f %Lp <0700 dir>   # old first probe, GNU filesystem mode
+stat: cannot read file system information for '%Lp': No such file or directory
+  File: "/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.B4zY03SMgv"
+    ID: 10000120000001a Namelen: ?       Type: apfs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 242837545  Free: 55559595   Available: 55559595
+Inodes: Total: 2231005663 Free: 2222383800
+exit=1
+$ stat -f %m <file>        # old fmx_context_registry_mtime first probe
+stat: cannot read file system information for '%m': No such file or directory
+  File: "/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.B4zY03SMgv"
+    ID: 10000120000001a Namelen: ?       Type: apfs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 242837545  Free: 55559595   Available: 55559595
+Inodes: Total: 2231005663 Free: 2222383800
+exit=1
+
+== dir_mode from bin/fm-test-isolation-proof.sh (current HEAD) ==
+host BSD /usr/bin/stat: 700 rc=0
+GNU stat first on PATH: 700 rc=0
+missing path:           '' rc=1
+GNU, missing path:      '' rc=1
+
+== fmx_context_registry_mtime from bin/fm-x-lib.sh ==
+host BSD: 1577836800
+GNU:      1577836800

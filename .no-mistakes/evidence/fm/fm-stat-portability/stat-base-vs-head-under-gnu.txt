@@ -1,0 +1,14 @@
+== Base-commit forms under GNU stat (gstat 9.9 first on PATH; /usr/bin/stat replaced by 'stat' since macOS /usr/bin/stat is BSD) ==
+-- old tests/fm-spawn-orca-worktree.test.sh mode check (BSD-first) --
+captured=\ \ File:\ \"/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T/tmp.m8AjUmGzER/staged\"$'\n'\ \ \ \ ID:\ 10000120000001a\ Namelen:\ \?\ \ \ \ \ \ \ Type:\ apfs$'\n'Block\ size:\ 4096\ \ \ \ \ \ \ Fundamental\ block\ size:\ 4096$'\n'Blocks:\ Total:\ 242837545\ \ Free:\ 55555209\ \ \ Available:\ 55555209$'\n'Inodes:\ Total:\ 2230830231\ Free:\ 2222208360$'\n'600
+equals 600? NO
+-- new (GNU-first) form --
+captured=600
+equals 600? yes
+-- new form on host BSD stat --
+captured=600
+equals 600? yes
+-- old dir_mode logic under GNU stat --
+700
+-- old fmx_context_registry_mtime logic under GNU stat --
+1577836800
