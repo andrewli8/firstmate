@@ -444,6 +444,57 @@ EOF
   pass "an Orca spawn reclaims a launch file its pane never ran and fails visibly"
 }
 
+# A pane that unlinks the launch file after the spawn's last existence check but
+# before its reclaim wins the race and launches the worker, so the spawn must
+# treat the launch as consumed. The fake rm stands in for that pane.
+test_orca_pane_wins_launch_file_race_at_deadline() {
+  local case_dir home id=orca-env-race fb out status staged real_rm
+  case_dir="$TMP_ROOT/$id"
+  home="$case_dir/home"
+  mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+  touch "$home/state/.last-watcher-beat"
+  printf 'codex\n' > "$home/config/crew-harness"
+  printf 'manual\n' > "$home/config/backlog-backend"
+  printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+  printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+  fm_git_init_commit "$case_dir/project"
+  cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise an Orca pane that unlinks the launch file at the reclaim deadline.
+
+## Firstmate spec
+Confirm the spawn treats the launch as consumed.
+EOF
+  fb=$(make_orca_fakebin "$case_dir")
+  real_rm=$(command -v rm)
+  printf '#!/bin/sh\necho "GH_TOKEN=synthetic-token"\n' > "$fb/tmux"
+  cat > "$fb/rm" <<SH
+#!/bin/sh
+if [ "\$#" -eq 2 ] && [ "\$1" = -- ]; then
+  case "\$2" in
+    /tmp/fm-$id+*/launch.*.sh) "$real_rm" -f -- "\$2"; exit 1 ;;
+  esac
+fi
+exec "$real_rm" "\$@"
+SH
+  chmod +x "$fb/tmux" "$fb/rm"
+  out=$(FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+    FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+    FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+    FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" FM_ORCA_LAUNCH_CONSUME_POLLS=2 \
+    FM_TEST_ORCA_LOG="$case_dir/terminal.log" PATH="$fb:$PATH" \
+    "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
+  status=$?
+  expect_code 0 "$status" "a spawn whose pane won the launch-file race must succeed: $out"
+  assert_contains "$out" "spawned $id" "the spawn must report success when the pane consumed the launch file"
+  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
+  [ ! -e "$staged" ] || fail "the launch file survived the race: $staged"
+  assert_not_contains "$(cat "$home/state/$id.status" 2>/dev/null)" "refused the worker launch" "the spawn refused a launch the pane consumed"
+  pass "an Orca spawn treats a launch file the pane unlinked at the deadline as consumed"
+}
+
 # A pane that sources the launch file but cannot unlink it refuses the worker
 # and stays interactive; the spawn reclaims the file, fails, and must leave the
 # Orca terminal open.
@@ -636,6 +687,7 @@ test_orca_allowlist_without_source_warns
 test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure
 test_orca_unrun_launch_file_is_reclaimed
 test_orca_launch_file_delete_failure_keeps_terminal
+test_orca_pane_wins_launch_file_race_at_deadline
 test_orca_snapshot_keeps_raw_bytes_tmux_reports
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run
