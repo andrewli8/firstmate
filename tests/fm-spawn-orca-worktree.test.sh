@@ -82,8 +82,19 @@ case "$1 $2" in
         prev=$a
       done
     fi
+    # FM_TEST_ORCA_HOLD_TEXT holds the source-text delivery open after the
+    # text arrived, so a test can interrupt the spawn before it sends Enter.
+    if [ "${FM_TEST_ORCA_HOLD_TEXT:-0}" = 1 ]; then
+      case "$*" in
+        */launch.*)
+          touch "$DIR/text-delivered"
+          i=0
+          while [ ! -e "$DIR/release" ] && [ "$i" -lt 100 ]; do sleep 0.1; i=$((i + 1)); done
+          ;;
+      esac
+    fi
     if [ "${FM_TEST_ORCA_SEND_FAIL:-0}" = 1 ]; then
-      case "$*" in *"--text . "*) exit 1 ;; esac
+      case "$*" in */launch.*) exit 1 ;; esac
     fi
     # FM_TEST_ORCA_CONSUME acts as the pane: it captures the staged file and its
     # mode, then unlinks it as the real launch line does, optionally after a delay.
@@ -92,8 +103,8 @@ case "$1 $2" in
       for a in "$@"; do
         if [ "$prev" = --text ]; then
           case "$a" in
-            ". '"*"'")
-              f=${a#". '"}; f=${f%"'"}
+            *"'"*/launch.*)
+              f=${a#*"'"}; f=${f%%"'"*}
               (
                 sleep "${FM_TEST_ORCA_CONSUME_DELAY:-0}"
                 { stat -c '%a' "$f" 2>/dev/null || stat -f '%Lp' "$f"; } > "$f.mode"
@@ -112,8 +123,8 @@ case "$1 $2" in
       for a in "$@"; do
         if [ "$prev" = --text ]; then
           case "$a" in
-            ". '"*"'")
-              f=${a#". '"}; f=${f%"'"}
+            *"'"*/launch.*)
+              f=${a#*"'"}; f=${f%%"'"*}
               mkdir -p "$DIR/rmfail"
               printf '#!/bin/sh\nexit 1\n' > "$DIR/rmfail/rm"
               chmod +x "$DIR/rmfail/rm"
@@ -222,7 +233,7 @@ EOF
 # newlines. Removing the source overlay, ambient clearing, or quoting breaks
 # these executions of the real staged spawn command.
 test_orca_launch_uses_controlled_tmux_environment() {
-  local setting case_dir home id fb out status staged staged_content result expected value pane_shell failbin
+  local setting case_dir home id fb out status staged staged_content result expected value pane_shell failbin delivered
   for setting in absent enabled empty unavailable malformed nonregular missing sendfail; do
     id="orca-env-$setting"
     case_dir="$TMP_ROOT/$id"
@@ -304,7 +315,7 @@ EOF
     fi
     expect_code 0 "$status" "controlled-source spawn should succeed: $out"
     assert_not_contains "$out" "warning: backend=orca" "a configured source must not warn about ambient Orca values"
-    staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+    staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
     [ -f "$staged.copy" ] || fail "Orca did not receive the staged launch path"
     [ ! -e "$staged" ] || fail "spawn returned before the pane consumed the launch file"
     [ "$(cat "$staged.mode")" = 600 ] || fail "credential launch file is not private"
@@ -336,6 +347,21 @@ EOF
       expect_code 0 "$?" "a launch file reclaimed before the pane unlinked it must refuse the worker in $pane_shell"
       assert_contains "$result" 'cannot remove private launch file' "a reclaimed launch file must refuse before worker execution"
       assert_contains "$result" SHELL-STILL-ALIVE "a reclaimed launch file killed the interactive $pane_shell pane"
+      mv "$staged.reclaimed" "$staged"
+      # The line Orca actually received must keep an errexit pane open both when
+      # its unlink fails and when the file was reclaimed before the pane opened it.
+      delivered=$(grep "/launch\." "$case_dir/terminal.log" | tail -1)
+      result=$(env -i HOME="$case_dir/user-home" PATH="$failbin:$PATH" TERM=xterm \
+        "$pane_shell" -i -c "set -e; $delivered; printf '\nSHELL-STILL-ALIVE\n'" 2>&1)
+      expect_code 0 "$?" "failed deletion must preserve an errexit $pane_shell pane"
+      assert_contains "$result" 'cannot remove private launch file' "deletion failure under errexit must refuse before worker execution"
+      assert_contains "$result" SHELL-STILL-ALIVE "deletion refusal killed the errexit $pane_shell pane"
+      assert_not_contains "$result" 'launch file still contains credentials' "deletion refusal under errexit ran the worker in $pane_shell"
+      mv "$staged" "$staged.reclaimed"
+      result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
+        "$pane_shell" -i -c "set -e; $delivered; printf '\nSHELL-STILL-ALIVE\n'" 2>&1)
+      expect_code 0 "$?" "a launch file reclaimed before the pane opened it must preserve an errexit $pane_shell pane"
+      assert_contains "$result" SHELL-STILL-ALIVE "a launch file reclaimed before sourcing killed the errexit $pane_shell pane"
       mv "$staged.reclaimed" "$staged"
       result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
         GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh FM_TEST_PERSONAL=personal-value \
@@ -396,7 +422,7 @@ SH
   status=$?
   [ "$status" -ne 0 ] || fail "a spawn whose backlog transition failed reported success: $out"
   assert_contains "$out" "could not be moved to In flight" "the spawn did not fail at the backlog transition"
-  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
   [ -f "$staged.copy" ] || fail "spawn removed the launch file before a slow pane ran it: $staged"
   [ ! -e "$staged" ] || fail "the consumed launch file is still present: $staged"
@@ -436,7 +462,7 @@ EOF
   status=$?
   expect_code 1 "$status" "a spawn whose pane never ran the launch command must fail: $out"
   assert_contains "$out" "did not run the launch command" "the failure must name the unrun launch command"
-  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
   [ ! -e "$staged" ] || fail "an unrun launch left credentials in $staged"
   assert_contains "$(cat "$home/state/$id.status")" "did not run the launch command" "the failure must reach the task status"
@@ -488,7 +514,7 @@ SH
   status=$?
   expect_code 0 "$status" "a spawn whose pane won the launch-file race must succeed: $out"
   assert_contains "$out" "spawned $id" "the spawn must report success when the pane consumed the launch file"
-  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
   [ ! -e "$staged" ] || fail "the launch file survived the race: $staged"
   assert_not_contains "$(cat "$home/state/$id.status" 2>/dev/null)" "refused the worker launch" "the spawn refused a launch the pane consumed"
@@ -531,11 +557,100 @@ EOF
   assert_contains "$(cat "$case_dir/pane.out")" 'cannot remove private launch file' "the pane must refuse the worker launch"
   assert_contains "$(cat "$case_dir/pane.out")" SHELL-STILL-ALIVE "the deletion refusal must keep the pane shell running"
   assert_contains "$(cat "$home/state/$id.status")" "could not remove the launch file" "the failure must reach the task status"
-  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
   [ ! -e "$staged" ] || fail "the spawn did not reclaim the launch file: $staged"
   [ ! -e "$case_dir/terminal-closed" ] || fail "a launch-file deletion failure closed the Orca terminal"
   pass "an Orca pane that cannot remove its launch file refuses the worker and keeps its terminal"
+}
+
+# A spawn interrupted after delivering the launch command is the last owner of
+# the credential-bearing file, so it must reclaim it with the same arbitration
+# as the consume deadline and leave the terminal open. Each case interrupts the
+# real spawn either while it waits for the pane to consume the file or while the
+# source text has been delivered but Enter has not. The copy taken before the
+# signal stands in for a pane that opened the file just before the reclaim.
+test_orca_interrupted_spawn_reclaims_launch_file() {
+  local phase sig id case_dir home fb pid status staged i want delivered result
+  for phase in consume enter; do
+    for sig in TERM HUP INT; do
+      id="orca-env-interrupt-$phase-$sig"
+      case_dir="$TMP_ROOT/$id"
+      home="$case_dir/home"
+      mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+      touch "$home/state/.last-watcher-beat"
+      printf 'manual\n' > "$home/config/backlog-backend"
+      printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+      printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+      fm_git_init_commit "$case_dir/project"
+      cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise an interrupted Orca spawn after launch delivery.
+
+## Firstmate spec
+Confirm the staged credential file is reclaimed.
+EOF
+      fb=$(make_orca_fakebin "$case_dir")
+      printf '#!/bin/sh\necho "GH_TOKEN=synthetic-interrupt-token"\n' > "$fb/tmux"
+      chmod +x "$fb/tmux"
+      # A background job ignores SIGINT on entry; restore the default so the
+      # spawn receives INT as an interactive caller would deliver it.
+      FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+        FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+        FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+        FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
+        FM_TEST_ORCA_LOG="$case_dir/terminal.log" \
+        FM_TEST_ORCA_HOLD_TEXT="$([ "$phase" = enter ] && echo 1 || echo 0)" \
+        PATH="$fb:$PATH" python3 -c 'import os,signal,sys; signal.signal(signal.SIGINT, signal.SIG_DFL); os.execvp(sys.argv[1], sys.argv[1:])' \
+        "$SPAWN" "$id" "$case_dir/project" --mode direct-PR --yolo off --backend orca \
+        --harness "touch '$case_dir/worker-ran'" > "$case_dir/spawn.log" 2>&1 &
+      pid=$!
+      for ((i = 0; i < 300; i++)); do
+        if [ "$phase" = enter ]; then
+          [ ! -e "$case_dir/text-delivered" ] || break
+        elif [ -f "$case_dir/terminal.log" ] &&
+          [ "$(grep -A1 "/launch\." "$case_dir/terminal.log" | sed -n 2p)" = '' ] &&
+          [ "$(grep -A1 "/launch\." "$case_dir/terminal.log" | wc -l | tr -d ' ')" = 2 ]; then
+          break
+        fi
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.1
+      done
+      staged=
+      [ ! -f "$case_dir/terminal.log" ] || staged=$(sed -n "s/^[^']*'\([^']*\/launch\.[^'\/]*\.sh\)'.*$/\1/p" "$case_dir/terminal.log" | tail -1)
+      if [ -z "$staged" ] || [ ! -f "$staged" ] || ! kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null
+        touch "$case_dir/release"
+        wait "$pid"
+        fail "$phase/$sig: the spawn was not waiting on a delivered launch file: $(cat "$case_dir/spawn.log")"
+      fi
+      cp "$staged" "$case_dir/opened-launch.sh"
+      kill -"$sig" "$pid"
+      touch "$case_dir/release"
+      wait "$pid"
+      status=$?
+      case "$sig" in TERM) want=143 ;; HUP) want=129 ;; INT) want=130 ;; esac
+      expect_code "$want" "$status" "$phase/$sig: interrupted spawn must exit with the signal status: $(cat "$case_dir/spawn.log")"
+      [ ! -e "$staged" ] || fail "$phase/$sig: interrupted spawn left credentials in $staged"
+      [ ! -e "$case_dir/terminal-closed" ] || fail "$phase/$sig: interrupted spawn closed the Orca terminal"
+      assert_contains "$(cat "$home/state/$id.status" 2>/dev/null)" "refused the worker launch" "$phase/$sig: the reclaim must reach the task status"
+      if [ "$phase" = enter ]; then
+        [ "$(grep -A1 "/launch\." "$case_dir/terminal.log" | wc -l | tr -d ' ')" = 1 ] || fail "$phase/$sig: spawn sent Enter after the interrupt"
+      fi
+      delivered=$(grep "/launch\." "$case_dir/terminal.log" | tail -1)
+      result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
+        /bin/sh -c "set -e; $delivered; echo SHELL-STILL-ALIVE" 2>&1)
+      assert_contains "$result" SHELL-STILL-ALIVE "$phase/$sig: the delivered line killed the pane after the reclaim"
+      # shellcheck disable=SC2016 # The pane shell expands its own argument.
+      result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
+        /bin/sh -c '. "$1" || true; echo SHELL-STILL-ALIVE' _ "$case_dir/opened-launch.sh" 2>&1)
+      assert_contains "$result" 'cannot remove private launch file' "$phase/$sig: a pane that opened the file before the reclaim must refuse"
+      assert_contains "$result" SHELL-STILL-ALIVE "$phase/$sig: the refusal killed the pane"
+      [ ! -e "$case_dir/worker-ran" ] || fail "$phase/$sig: the worker ran after the spawn reclaimed its launch file"
+      pass "an Orca spawn interrupted by $sig during the $phase step reclaims its launch file and refuses the worker"
+    done
+  done
 }
 
 # tmux versions differ on whether they keep invalid UTF-8, so pin the adapter
@@ -686,6 +801,7 @@ test_orca_launch_uses_controlled_tmux_environment
 test_orca_allowlist_without_source_warns
 test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure
 test_orca_unrun_launch_file_is_reclaimed
+test_orca_interrupted_spawn_reclaims_launch_file
 test_orca_launch_file_delete_failure_keeps_terminal
 test_orca_pane_wins_launch_file_race_at_deadline
 test_orca_snapshot_keeps_raw_bytes_tmux_reports

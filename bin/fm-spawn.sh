@@ -369,9 +369,13 @@
 #   worker. Values are shell-quoted only in the owner-only staged launch file,
 #   never terminal input, and the pane deletes that file as sourcing starts,
 #   before the worker executes; a deletion failure refuses the worker launch and
-#   keeps the interactive shell. Spawn waits up to 30 seconds for that deletion;
-#   if the pane never ran the command or could not delete the file, spawn
-#   removes it, refuses the worker launch, and leaves the Orca terminal open.
+#   keeps the interactive shell, even with errexit set (a Bash 3.2 or dash
+#   errexit pane still exits if spawn reclaims the file in the instant between
+#   the pane's existence check and its source). Spawn waits up to 30
+#   seconds for that deletion; if the pane never ran the command or could not
+#   delete the file, or HUP, INT or TERM interrupts spawn first, spawn removes
+#   it unless the pane already did, refuses the worker launch, and leaves the
+#   Orca terminal open.
 #   The selector is not inherited into secondmate homes. This is not a
 #   filesystem sandbox; project and harness sandbox
 #   settings still own access to personal credential files.
@@ -1395,6 +1399,19 @@ parse_orca_worktree_result() {
   fi
 }
 
+# Non-forced unlink arbitration for a delivered Orca source-mode launch file:
+# the pane unlinks it before launching the worker and refuses when that unlink
+# fails, so exactly one side's unlink succeeds. Returns 0 when this spawn removed
+# it (the worker is refused), 1 when the pane already had, and 2 when the file
+# could not be removed.
+spawn_orca_reclaim_launch_file() {
+  rm -- "$SPAWN_STAGED_LAUNCH_FILE" 2>/dev/null && return 0
+  if [ -e "$SPAWN_STAGED_LAUNCH_FILE" ] || [ -L "$SPAWN_STAGED_LAUNCH_FILE" ]; then
+    return 2
+  fi
+  return 1
+}
+
 spawn_abort_cleanup() {
   local status=$?
   if [ "$RELAUNCH_REPLACEMENT_PENDING" = 1 ] &&
@@ -1523,9 +1540,20 @@ spawn_abort_cleanup() {
     fm_lock_release "$SPAWN_CONTROL_LOCK" || true
   fi
   [ -z "$SPAWN_META_TMP" ] || rm -f "$SPAWN_META_TMP" 2>/dev/null || true
-  if [ "$status" -ne 0 ] && [ "${ORCA_LAUNCH_ENV_ENABLED:-0}" = 1 ] && [ -n "$SPAWN_STAGED_LAUNCH_FILE" ] &&
-    { [ "$SPAWN_LAUNCH_SENT" = 0 ] || [ "$SPAWN_ENDPOINT_CLOSED" = 1 ]; }; then
-    rm -f -- "$SPAWN_STAGED_LAUNCH_FILE" 2>/dev/null || true
+  if [ "$status" -ne 0 ] && [ "${ORCA_LAUNCH_ENV_ENABLED:-0}" = 1 ] && [ -n "$SPAWN_STAGED_LAUNCH_FILE" ]; then
+    if [ "$SPAWN_LAUNCH_SENT" = 0 ] || [ "$SPAWN_ENDPOINT_CLOSED" = 1 ]; then
+      rm -f -- "$SPAWN_STAGED_LAUNCH_FILE" 2>/dev/null || true
+    else
+      # The open terminal may still source the delivered file, and no other
+      # owner is left to remove it once this spawn exits, so arbitrate exactly
+      # as the consume deadline does.
+      local reclaim_status=0
+      spawn_orca_reclaim_launch_file || reclaim_status=$?
+      case "$reclaim_status" in
+        0) kimi_spawn_fail "spawn ended before Orca terminal $T ran the launch command; removed the launch file and refused the worker launch" || true ;;
+        2) echo "warning: could not remove Orca launch file $SPAWN_STAGED_LAUNCH_FILE; remove it by hand" >&2 ;;
+      esac
+    fi
   fi
   if [ "$CONFIG_INHERIT_LOCK_HELD" = 1 ]; then
     CONFIG_INHERIT_LOCK_HELD=0
@@ -5843,23 +5871,37 @@ spawn_orca_launch_send_fail() {
 # bounded time and reclaim it. The worker never started, but the interactive
 # pane stays open.
 spawn_orca_wait_launch_consumed() {
-  local i=0 max=${FM_ORCA_LAUNCH_CONSUME_POLLS:-150}
+  local i=0 max=${FM_ORCA_LAUNCH_CONSUME_POLLS:-150} reclaim_status=0
   while [ -e "$LAUNCH_FILE" ]; do
     i=$((i + 1))
     if [ "$i" -gt "$max" ]; then
-      if ! rm -- "$LAUNCH_FILE" 2>/dev/null && [ ! -e "$LAUNCH_FILE" ] && [ ! -L "$LAUNCH_FILE" ]; then
-        return 0
-      fi
+      spawn_orca_reclaim_launch_file || reclaim_status=$?
+      [ "$reclaim_status" != 1 ] || return 0
       kimi_spawn_fail "Orca terminal $T did not run the launch command or could not remove the launch file; refused the worker launch"
       exit 1
     fi
     sleep 0.2
   done
 }
+if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+  # Bash runs the EXIT trap for an untrapped fatal signal with status 0, which
+  # abort cleanup reads as success, so exit with the signal's status instead
+  # until the pane has consumed the delivered launch file.
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+fi
 SPAWN_LAUNCH_SENT=1
 # errexit is on here: a failed send still exits, and Orca source mode first
 # removes the credential-bearing file the pane never received.
-if ! spawn_send_literal "$T" ". $(shell_quote "$LAUNCH_FILE")"; then
+LAUNCH_SOURCE_TEXT=". $(shell_quote "$LAUNCH_FILE")"
+if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+  # A refused source-mode launch fails the source command, and some shells exit
+  # under errexit on sourcing a file spawn already reclaimed even inside ||, so
+  # keep an errexit pane shell open in both cases.
+  LAUNCH_SOURCE_TEXT="if [ -e $(shell_quote "$LAUNCH_FILE") ]; then $LAUNCH_SOURCE_TEXT || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi"
+fi
+if ! spawn_send_literal "$T" "$LAUNCH_SOURCE_TEXT"; then
   [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_launch_send_fail
   exit 1
 fi
@@ -5872,7 +5914,10 @@ if ! spawn_send_key "$T" Enter; then
   [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_launch_send_fail
   exit 1
 fi
-[ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_wait_launch_consumed
+if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+  spawn_orca_wait_launch_consumed
+  trap - HUP INT TERM
+fi
 if [ "$HARNESS" = kimi ]; then
   if ! kimi_wait_for_ready; then
     kimi_spawn_fail "$KIMI_READY_FAILURE_DETAIL"
