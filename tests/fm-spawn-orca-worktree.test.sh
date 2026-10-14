@@ -81,6 +81,26 @@ case "$1 $2" in
     if [ "${FM_TEST_ORCA_SEND_FAIL:-0}" = 1 ]; then
       case "$*" in *"--text . "*) exit 1 ;; esac
     fi
+    # FM_TEST_ORCA_CONSUME acts as the pane: it captures the staged file and its
+    # mode, then unlinks it as the real launch line does, optionally after a delay.
+    if [ "${FM_TEST_ORCA_CONSUME:-0}" = 1 ]; then
+      prev=
+      for a in "$@"; do
+        if [ "$prev" = --text ]; then
+          case "$a" in
+            ". '"*"'")
+              f=${a#". '"}; f=${f%"'"}
+              (
+                sleep "${FM_TEST_ORCA_CONSUME_DELAY:-0}"
+                { stat -c '%a' "$f" 2>/dev/null || stat -f '%Lp' "$f"; } > "$f.mode"
+                cp "$f" "$f.copy" && rm -f "$f"
+              ) >/dev/null 2>&1 &
+              ;;
+          esac
+        fi
+        prev=$a
+      done
+    fi
     printf '{"ok":true}\n'
     exit 0
     ;;
@@ -238,6 +258,7 @@ EOF
       FM_TEST_ORCA_LOG="$case_dir/terminal.log" \
       FM_TEST_SOURCE_UNAVAILABLE="$([ "$setting" = unavailable ] && echo 1 || echo 0)" \
       FM_TEST_ORCA_SEND_FAIL="$([ "$setting" = sendfail ] && echo 1 || echo 0)" \
+      FM_TEST_ORCA_CONSUME=1 \
       PATH="$fb:$PATH" "$SPAWN" "$id" "$case_dir/project" \
       --mode direct-PR --yolo off --backend orca --harness "/bin/sh '$case_dir/probe.sh' '$case_dir/stage-path'" 2>&1)
     status=$?
@@ -260,11 +281,12 @@ EOF
     expect_code 0 "$status" "controlled-source spawn should succeed: $out"
     assert_not_contains "$out" "warning: backend=orca" "a configured source must not warn about ambient Orca values"
     staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
-    [ -f "$staged" ] || fail "Orca did not receive the staged launch path"
-    [ "$(stat -c '%a' "$staged" 2>/dev/null || stat -f '%Lp' "$staged")" = 600 ] || fail "credential launch file is not private"
+    [ -f "$staged.copy" ] || fail "Orca did not receive the staged launch path"
+    [ ! -e "$staged" ] || fail "spawn returned before the pane consumed the launch file"
+    [ "$(cat "$staged.mode")" = 600 ] || fail "credential launch file is not private"
     [ "$(stat -c '%a' "$(dirname "$staged")" 2>/dev/null || stat -f '%Lp' "$(dirname "$staged")")" = 700 ] || fail "credential launch directory is not private"
     assert_not_contains "$(cat "$case_dir/terminal.log")" synthetic "source values leaked into terminal input"
-    staged_content=$(cat "$staged")
+    staged_content=$(cat "$staged.copy")
     printf '%s\n' "$staged" > "$case_dir/stage-path"
     failbin=$(fm_fakebin "$case_dir/delete-refusal")
     printf '#!/bin/sh\nexit 1\n' > "$failbin/rm"
@@ -300,7 +322,7 @@ EOF
 # must not delete it out from under the pending source. The fake Orca accepts
 # input without executing it, and a failed backlog transition aborts the spawn
 # after delivery.
-test_orca_failed_spawn_keeps_the_launch_file_for_a_live_terminal() {
+test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure() {
   local case_dir home id=orca-env-unsourced fb out status staged real_axi
   real_axi=$(command -v tasks-axi) || { pass "skipped live-terminal launch file case (tasks-axi is not installed)"; return 0; }
   case_dir="$TMP_ROOT/$id"
@@ -320,7 +342,7 @@ test_orca_failed_spawn_keeps_the_launch_file_for_a_live_terminal() {
 Exercise a failed Orca spawn after launch delivery.
 
 ## Firstmate spec
-Confirm the staged credential file does not outlive the failed spawn.
+Confirm a slow pane still receives the staged launch file before the spawn fails later.
 EOF
   fb=$(make_orca_fakebin "$case_dir")
   printf '#!/bin/sh\necho "GH_TOKEN=synthetic-token"\n' > "$fb/tmux"
@@ -337,16 +359,79 @@ SH
     FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
     FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
     FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
-    FM_TEST_ORCA_LOG="$case_dir/terminal.log" PATH="$fb:$PATH" \
-    "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
+    FM_TEST_ORCA_LOG="$case_dir/terminal.log" FM_TEST_ORCA_CONSUME=1 FM_TEST_ORCA_CONSUME_DELAY=3 \
+    PATH="$fb:$PATH" "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
   status=$?
   [ "$status" -ne 0 ] || fail "a spawn whose backlog transition failed reported success: $out"
   assert_contains "$out" "could not be moved to In flight" "the spawn did not fail at the backlog transition"
   staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
-  [ -f "$staged" ] || fail "abort cleanup deleted the launch file a live Orca terminal was sent to source: $staged"
-  rm -f -- "$staged"
-  pass "a failed Orca spawn keeps the delivered launch file while its terminal stays open"
+  [ -f "$staged.copy" ] || fail "spawn removed the launch file before a slow pane ran it: $staged"
+  [ ! -e "$staged" ] || fail "the consumed launch file is still present: $staged"
+  pass "an Orca spawn waits for a slow pane to consume its launch file before a later failure"
+}
+
+# A pane that accepts the source command but never runs it cannot unlink the
+# credential-bearing file itself, so the spawn reclaims it and fails visibly.
+test_orca_unrun_launch_file_is_reclaimed() {
+  local case_dir home id=orca-env-unrun fb out status staged
+  case_dir="$TMP_ROOT/$id"
+  home="$case_dir/home"
+  mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+  touch "$home/state/.last-watcher-beat"
+  printf 'codex\n' > "$home/config/crew-harness"
+  printf 'manual\n' > "$home/config/backlog-backend"
+  printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+  printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+  fm_git_init_commit "$case_dir/project"
+  cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise an Orca pane that never runs the launch command.
+
+## Firstmate spec
+Confirm the staged credential file is reclaimed.
+EOF
+  fb=$(make_orca_fakebin "$case_dir")
+  printf '#!/bin/sh\necho "GH_TOKEN=synthetic-token"\n' > "$fb/tmux"
+  chmod +x "$fb/tmux"
+  out=$(FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+    FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+    FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+    FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" FM_ORCA_LAUNCH_CONSUME_POLLS=2 \
+    FM_TEST_ORCA_LOG="$case_dir/terminal.log" PATH="$fb:$PATH" \
+    "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
+  status=$?
+  expect_code 1 "$status" "a spawn whose pane never ran the launch command must fail: $out"
+  assert_contains "$out" "did not run the launch command" "the failure must name the unrun launch command"
+  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
+  [ ! -e "$staged" ] || fail "an unrun launch left credentials in $staged"
+  assert_contains "$(cat "$home/state/$id.status")" "did not run the launch command" "the failure must reach the task status"
+  pass "an Orca spawn reclaims a launch file its pane never ran and fails visibly"
+}
+
+# tmux versions differ on whether they keep invalid UTF-8, so pin the adapter
+# itself: whatever bytes tmux reports must reach the shell assignment unchanged.
+test_orca_snapshot_keeps_raw_bytes_tmux_reports() {
+  local case_dir fb assignments
+  case_dir="$TMP_ROOT/raw-bytes"
+  mkdir -p "$case_dir"
+  fb=$(fm_fakebin "$case_dir")
+  cat > "$fb/tmux" <<'EOF'
+#!/bin/sh
+[ "$#" -ge 5 ] || exit 0
+printf 'GH_TOKEN=raw-\377\376-'"'"'q\n'
+EOF
+  chmod +x "$fb/tmux"
+  printf 'raw-\377\376-'"'"'q' > "$case_dir/expected"
+  # shellcheck disable=SC2016 # The child shell expands its own arguments.
+  assignments=$(PATH="$fb:$PATH" bash -c '. "$1"; fm_backend_orca_launch_env_args scoped GH_TOKEN' _ "$ROOT/bin/backends/orca.sh") \
+    || fail "snapshot refused a value with bytes that are not valid UTF-8"
+  # shellcheck disable=SC2016 # The child shell expands the exported value.
+  sh -c "export $assignments; printf %s \"\$GH_TOKEN\"" > "$case_dir/observed"
+  cmp -s "$case_dir/expected" "$case_dir/observed" || fail "snapshot altered bytes tmux reported"
+  pass "the Orca snapshot passes through bytes tmux reports even when they are not valid UTF-8"
 }
 
 # Without a configured source, a nonempty allowlist on Orca still resolves from
@@ -472,7 +557,9 @@ PY
 test_orca_source_preserves_values_without_utf8_locale
 test_orca_launch_uses_controlled_tmux_environment
 test_orca_allowlist_without_source_warns
-test_orca_failed_spawn_keeps_the_launch_file_for_a_live_terminal
+test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure
+test_orca_unrun_launch_file_is_reclaimed
+test_orca_snapshot_keeps_raw_bytes_tmux_reports
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run
 
