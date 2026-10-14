@@ -70,6 +70,10 @@ case "$1 $2" in
     printf '{"ok":true,"result":{"terminal":{"handle":"term-1"}}}\n'
     exit 0
     ;;
+  "terminal close")
+    touch "$DIR/terminal-closed"
+    exit 0
+    ;;
   "terminal send")
     if [ -n "${FM_TEST_ORCA_LOG:-}" ]; then
       prev=
@@ -95,6 +99,26 @@ case "$1 $2" in
                 { stat -c '%a' "$f" 2>/dev/null || stat -f '%Lp' "$f"; } > "$f.mode"
                 cp "$f" "$f.copy" && rm -f "$f"
               ) >/dev/null 2>&1 &
+              ;;
+          esac
+        fi
+        prev=$a
+      done
+    fi
+    # FM_TEST_ORCA_RM_FAIL acts as a pane that sources the staged file with an
+    # rm that always fails, then keeps running.
+    if [ "${FM_TEST_ORCA_RM_FAIL:-0}" = 1 ]; then
+      prev=
+      for a in "$@"; do
+        if [ "$prev" = --text ]; then
+          case "$a" in
+            ". '"*"'")
+              f=${a#". '"}; f=${f%"'"}
+              mkdir -p "$DIR/rmfail"
+              printf '#!/bin/sh\nexit 1\n' > "$DIR/rmfail/rm"
+              chmod +x "$DIR/rmfail/rm"
+              # shellcheck disable=SC2016 # The pane shell expands its own arguments.
+              PATH="$DIR/rmfail:$PATH" sh -c '. "$1"; echo "source-status=$?"; echo SHELL-STILL-ALIVE' _ "$f" > "$DIR/pane.out" 2>&1 &
               ;;
           esac
         fi
@@ -408,7 +432,51 @@ EOF
   [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
   [ ! -e "$staged" ] || fail "an unrun launch left credentials in $staged"
   assert_contains "$(cat "$home/state/$id.status")" "did not run the launch command" "the failure must reach the task status"
+  [ ! -e "$case_dir/terminal-closed" ] || fail "an unrun launch closed the Orca terminal"
   pass "an Orca spawn reclaims a launch file its pane never ran and fails visibly"
+}
+
+# A pane that sources the launch file but cannot unlink it refuses the worker
+# and stays interactive; the spawn reclaims the file, fails, and must leave the
+# Orca terminal open.
+test_orca_launch_file_delete_failure_keeps_terminal() {
+  local case_dir home id=orca-env-rmfail fb out status staged
+  case_dir="$TMP_ROOT/$id"
+  home="$case_dir/home"
+  mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+  touch "$home/state/.last-watcher-beat"
+  printf 'codex\n' > "$home/config/crew-harness"
+  printf 'manual\n' > "$home/config/backlog-backend"
+  printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+  printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+  fm_git_init_commit "$case_dir/project"
+  cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise an Orca pane that cannot remove the launch file.
+
+## Firstmate spec
+Confirm the worker is refused and the terminal stays open.
+EOF
+  fb=$(make_orca_fakebin "$case_dir")
+  printf '#!/bin/sh\necho "GH_TOKEN=synthetic-token"\n' > "$fb/tmux"
+  chmod +x "$fb/tmux"
+  out=$(FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+    FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+    FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+    FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" FM_ORCA_LAUNCH_CONSUME_POLLS=10 \
+    FM_TEST_ORCA_LOG="$case_dir/terminal.log" FM_TEST_ORCA_RM_FAIL=1 PATH="$fb:$PATH" \
+    "$SPAWN" "$id" "$case_dir/project" --mode no-mistakes --yolo off --backend orca 2>&1)
+  status=$?
+  expect_code 1 "$status" "a spawn whose pane could not remove the launch file must fail: $out"
+  assert_contains "$(cat "$case_dir/pane.out")" 'cannot remove private launch file' "the pane must refuse the worker launch"
+  assert_contains "$(cat "$case_dir/pane.out")" SHELL-STILL-ALIVE "the deletion refusal must keep the pane shell running"
+  assert_contains "$(cat "$home/state/$id.status")" "could not remove the launch file" "the failure must reach the task status"
+  staged=$(sed -n "s/^\. '\([^']*\)'$/\1/p" "$case_dir/terminal.log" | tail -1)
+  [ -n "$staged" ] || fail "Orca did not receive the staged launch path: $out"
+  [ ! -e "$staged" ] || fail "the spawn did not reclaim the launch file: $staged"
+  [ ! -e "$case_dir/terminal-closed" ] || fail "a launch-file deletion failure closed the Orca terminal"
+  pass "an Orca pane that cannot remove its launch file refuses the worker and keeps its terminal"
 }
 
 # tmux versions differ on whether they keep invalid UTF-8, so pin the adapter
@@ -559,6 +627,7 @@ test_orca_launch_uses_controlled_tmux_environment
 test_orca_allowlist_without_source_warns
 test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure
 test_orca_unrun_launch_file_is_reclaimed
+test_orca_launch_file_delete_failure_keeps_terminal
 test_orca_snapshot_keeps_raw_bytes_tmux_reports
 test_orca_fresh_spawn_enters_the_worktree_it_created
 test_orca_relaunch_is_refused_before_the_worktree_carveout_could_run

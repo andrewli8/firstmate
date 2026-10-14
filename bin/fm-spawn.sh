@@ -5829,21 +5829,26 @@ if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
 fi
 SPAWN_STAGED_LAUNCH_FILE=$LAUNCH_FILE
 sleep 0.3
-spawn_orca_launch_send_fail() { # [detail]
-  rm -f -- "$LAUNCH_FILE"
-  kimi_spawn_fail "${1:-launch command could not be delivered to Orca terminal $T}"
+spawn_orca_launch_send_fail() {
+  rm -f -- "$LAUNCH_FILE" 2>/dev/null || true
+  kimi_spawn_fail "launch command could not be delivered to Orca terminal $T"
   rovo_endpoint_cleanup
   exit 1
 }
 # Orca source mode: the pane unlinks the credential-bearing file as it starts
-# sourcing it. A pane that accepted the text but never ran it would otherwise
-# leave the file until teardown, so wait a bounded time and reclaim it.
+# sourcing it. A pane that accepted the text but never ran it, or ran it and
+# could not unlink it, would otherwise leave the file until teardown, so wait a
+# bounded time and reclaim it. The worker never started, but the interactive
+# pane stays open.
 spawn_orca_wait_launch_consumed() {
   local i=0 max=${FM_ORCA_LAUNCH_CONSUME_POLLS:-150}
   while [ -e "$LAUNCH_FILE" ]; do
     i=$((i + 1))
-    [ "$i" -le "$max" ] || spawn_orca_launch_send_fail \
-      "Orca terminal $T did not run the launch command; removed its staged credential file"
+    if [ "$i" -gt "$max" ]; then
+      rm -f -- "$LAUNCH_FILE" 2>/dev/null || true
+      kimi_spawn_fail "Orca terminal $T did not run the launch command or could not remove the launch file; refused the worker launch"
+      exit 1
+    fi
     sleep 0.2
   done
 }
