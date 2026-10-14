@@ -369,7 +369,8 @@
 #   worker. Values are shell-quoted only in the owner-only staged launch file,
 #   never terminal input, and the pane deletes that file as sourcing starts,
 #   before the worker executes; a deletion failure refuses the worker launch and
-#   keeps the interactive shell. The selector is not inherited into secondmate
+#   keeps the interactive shell. Spawn waits up to 30 seconds for that deletion;
+#   a pane that never runs the command has the file removed and the spawn fails. The selector is not inherited into secondmate
 #   homes. This is not a filesystem sandbox; project and harness sandbox
 #   settings still own access to personal credential files.
 # Claude permission mode (config/claude-permission-mode):
@@ -5828,11 +5829,23 @@ if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
 fi
 SPAWN_STAGED_LAUNCH_FILE=$LAUNCH_FILE
 sleep 0.3
-spawn_orca_launch_send_fail() {
+spawn_orca_launch_send_fail() { # [detail]
   rm -f -- "$LAUNCH_FILE"
-  kimi_spawn_fail "launch command could not be delivered to Orca terminal $T"
+  kimi_spawn_fail "${1:-launch command could not be delivered to Orca terminal $T}"
   rovo_endpoint_cleanup
   exit 1
+}
+# Orca source mode: the pane unlinks the credential-bearing file as it starts
+# sourcing it. A pane that accepted the text but never ran it would otherwise
+# leave the file until teardown, so wait a bounded time and reclaim it.
+spawn_orca_wait_launch_consumed() {
+  local i=0 max=${FM_ORCA_LAUNCH_CONSUME_POLLS:-150}
+  while [ -e "$LAUNCH_FILE" ]; do
+    i=$((i + 1))
+    [ "$i" -le "$max" ] || spawn_orca_launch_send_fail \
+      "Orca terminal $T did not run the launch command; removed its staged credential file"
+    sleep 0.2
+  done
 }
 SPAWN_LAUNCH_SENT=1
 # errexit is on here: a failed send still exits, and Orca source mode first
@@ -5850,6 +5863,7 @@ if ! spawn_send_key "$T" Enter; then
   [ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_launch_send_fail
   exit 1
 fi
+[ "$ORCA_LAUNCH_ENV_ENABLED" != 1 ] || spawn_orca_wait_launch_consumed
 if [ "$HARNESS" = kimi ]; then
   if ! kimi_wait_for_ready; then
     kimi_spawn_fail "$KIMI_READY_FAILURE_DETAIL"
