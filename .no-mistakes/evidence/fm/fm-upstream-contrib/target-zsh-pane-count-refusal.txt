@@ -1,0 +1,33 @@
+# target 633c3adf: invalid/overflow inherited GIT_CONFIG_COUNT sourced through the launch-prefix shape in the live spawned zsh worker pane
+# (setting a bad count tmux-wide breaks git itself, so treehouse get fails before the launch; see target-zsh-count-*-refused.txt)
+--- count=bad: launch file
+/private/tmp/fmgc.Rit5KL/home/bin/fm-git-strip-ai-trailers.sh env-file /private/tmp/fmgc.Rit5KL/home/state/gc5019628611.git-hooks /private/tmp/fmgc.Rit5KL/env-bad.sh && . /private/tmp/fmgc.Rit5KL/env-bad.sh || return 1 2>/dev/null || exit 1; /bin/sh /private/tmp/fmgc.Rit5KL/probe.sh
+--- probe ran?
+(no probe output: worker never ran)
+--- env-file exists?
+ls: /private/tmp/fmgc.Rit5KL/env-bad.sh: No such file or directory
+--- count=2147483647: launch file
+/private/tmp/fmgc.Rit5KL/home/bin/fm-git-strip-ai-trailers.sh env-file /private/tmp/fmgc.Rit5KL/home/state/gc5019628611.git-hooks /private/tmp/fmgc.Rit5KL/env-2147483647.sh && . /private/tmp/fmgc.Rit5KL/env-2147483647.sh || return 1 2>/dev/null || exit 1; /bin/sh /private/tmp/fmgc.Rit5KL/probe.sh
+--- probe ran?
+(no probe output: worker never ran)
+--- env-file exists?
+ls: /private/tmp/fmgc.Rit5KL/env-2147483647.sh: No such file or directory
+source-status=1
+SHELL-STILL-ALIVE
+/private/tmp/fmgc.Rit5KL/treehouse/.treehouse/notes-17f1bd/1/notes @2a851e78 ❯ export GIT_CONFIG_COUNT=2147483647; . /private/tmp/fmgc.Rit5KL/relaunch-2147483647.sh; echo source-status=$?; echo SHELL-
+STILL-ALIVE; export GIT_CONFIG_COUNT=2
+error: inherited GIT_CONFIG_COUNT cannot be extended
+source-status=1
+SHELL-STILL-ALIVE
+/private/tmp/fmgc.Rit5KL/treehouse/.treehouse/notes-17f1bd/1/notes @2a851e78 ❯                                                                                                              11:56:54 PM
+pane_dead=0 cmd=zsh
+== pane lines ==
+/private/tmp/fmgc.Rit5KL/treehouse/.treehouse/notes-17f1bd/1/notes @2a851e78 ❯ export GIT_CONFIG_COUNT=bad; . /private/tmp/fmgc.Rit5KL/relaunch-bad.sh; echo source-status=$?; echo SHELL-STILL-ALIVE; export GIT_CONFIG_COUNT=2
+error: invalid inherited GIT_CONFIG_COUNT
+source-status=1
+SHELL-STILL-ALIVE
+/private/tmp/fmgc.Rit5KL/treehouse/.treehouse/notes-17f1bd/1/notes @2a851e78 ❯ export GIT_CONFIG_COUNT=2147483647; . /private/tmp/fmgc.Rit5KL/relaunch-2147483647.sh; echo source-status=$?; echo SHELL-
+STILL-ALIVE; export GIT_CONFIG_COUNT=2
+error: inherited GIT_CONFIG_COUNT cannot be extended
+source-status=1
+SHELL-STILL-ALIVE

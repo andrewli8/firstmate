@@ -1,0 +1,17 @@
+root=/private/tmp/fmgc.aEWCfp id=gc4995129814 ref=HEAD mode=bad shell=/bin/zsh
+spawn exit=1
+error: treehouse get did not enter an isolated worktree within 60s (last seen '/private/tmp/fmgc.aEWCfp/home/projects/notes': it is the spawning project itself; spawning project '/private/tmp/fmgc.aEWCfp/home/projects/notes'); inspect window firstmate:fm-gc4995129814
+===== probe output (target-bad) =====
+(no probe output: worker never ran)
+===== worker pane (target-bad) =====
+@0 lab
+@1 fm-gc4995129814
+treehouse get
+/private/tmp/fmgc.aEWCfp/home/projects/notes main ❯ treehouse get                                                                                                                           11:52:43 PM
+A new version of treehouse is available: v2.3.0 → v3.1.3
+Run "treehouse update" to update
+not in a git or jj repository: git rev-parse --show-toplevel: error: bogus count in GIT_CONFIG_COUNT
+fatal: unable to parse command-line config
+/private/tmp/fmgc.aEWCfp/home/projects/notes main ❯                                                                                                                                         11:52:44 PM
+== full pane after wait ==
+== pane process ==

@@ -1,0 +1,17 @@
+root=/private/tmp/fmgc.nz4ogk id=gc5006317934 ref=HEAD mode=overflow shell=/bin/zsh
+spawn exit=1
+error: treehouse get did not enter an isolated worktree within 60s (last seen '/private/tmp/fmgc.nz4ogk/home/projects/notes': it is the spawning project itself; spawning project '/private/tmp/fmgc.nz4ogk/home/projects/notes'); inspect window firstmate:fm-gc5006317934
+===== probe output (target-overflow) =====
+(no probe output: worker never ran)
+===== worker pane (target-overflow) =====
+@0 lab
+@1 fm-gc5006317934
+treehouse get
+/private/tmp/fmgc.nz4ogk/home/projects/notes main ❯ treehouse get                                                                                                                           11:54:29 PM
+A new version of treehouse is available: v2.3.0 → v3.1.3
+Run "treehouse update" to update
+not in a git or jj repository: git rev-parse --show-toplevel: error: missing config key GIT_CONFIG_KEY_2
+fatal: unable to parse command-line config
+/private/tmp/fmgc.nz4ogk/home/projects/notes main ❯                                                                                                                                         11:54:29 PM
+== full pane after wait ==
+== pane process ==
