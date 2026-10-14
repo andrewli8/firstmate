@@ -1,0 +1,17 @@
+### backend=tmux with config/launch-env-allowlist=GH_TOKEN and config/launch-env-tmux-session=scoped-creds (no such session exists)
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.yjZEfb
+    spawned lab-tmuxback harness=sh kind=ship mode=direct-PR yolo=off window=primary:fm-lab-tmuxback worktree=/Users/andrew/.treehouse/project-b81a21/1/project
+    exit=0
+### worker pane primary:fm-lab-tmuxback:
+    . '/tmp/fm-lab-tmuxback+69aac64be4259559e1a618d7ba4ad8e91ac0f4928cc98bd0e9e59e28a98dfb9c/launch.s1791949676.32930.11333.sh'%
+    ~/.treehouse/project-b81a21/1/project @a2765050 ❯ . '/tmp/fm-lab-tmuxback+69aac64be4259559e1a618d7ba4ad8e91ac0f4928cc98bd0e9e59e28a98dfb9c/launch.s1791949676.32930.11333.sh'               11:47:57 PM
+    === worker environment (inside Orca pane) ===
+    LAUNCH FILE STILL PRESENT: /tmp/fm-lab-tmuxback+69aac64be4259559e1a618d7ba4ad8e91ac0f4928cc98bd0e9e59e28a98dfb9c/launch.s1791949676.32930.11333.sh
+    GH_TOKEN=[pane-gh-token]
+    GH_CONFIG_DIR=[<unset>]
+    FM_LAB_UNSET=[<unset>]
+    SSH_AUTH_SOCK=[<unset>]
+    DATABASE_URL=[<unset>]
+    GIT_CONFIG_NOSYSTEM=[<unset>]
+    === end ===
+    ~/.treehouse/project-b81a21/1/project @a2765050 ❯                                                                                                                                           11:47:57 PM

@@ -1,0 +1,29 @@
+### scenario: globalonly
+### config/launch-env-allowlist:
+    GH_TOKEN
+    GLOBAL_ONLY
+### config/launch-env-tmux-session: scoped-creds
+### scoped tmux session environment (tmux show-environment -t =scoped-creds):
+    -DISPLAY
+    -FM_LAB_UNSET
+    GH_CONFIG_DIR=/scoped/gh
+    GH_TOKEN=scoped-tok-' $(touch /tmp/fm-lab.jB7h6c/sim/pwned) `id`
+    -KRB5CCNAME
+    -MSYSTEM
+    -SSH_AGENT_PID
+    -SSH_ASKPASS
+    SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.ljUlgiNeXY/Listeners
+    -SSH_CONNECTION
+    -WINDOWID
+    -XAUTHORITY
+### $ bin/fm-spawn.sh lab-globalonly <project> --backend orca --harness probe.sh
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.jB7h6c
+    error: cannot snapshot configured tmux launch environment (required name GLOBAL_ONLY); refusing Orca launch
+### fm-spawn exit=1
+### orca worktree allocated: no; orca terminal created: 0
+0
+### metadata published: no
+### text typed into Orca terminal:
+    (none)
+### staged launch files left under /tmp/fm-lab-globalonly+*:
+### injection marker file exists: no

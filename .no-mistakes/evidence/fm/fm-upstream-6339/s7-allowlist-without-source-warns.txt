@@ -1,0 +1,56 @@
+### scenario: nosource
+### config/launch-env-allowlist:
+    GH_TOKEN
+### config/launch-env-tmux-session: (absent)
+### scoped tmux session environment (tmux show-environment -t =scoped-creds):
+    -DISPLAY
+    -FM_LAB_UNSET
+    GH_CONFIG_DIR=/scoped/gh
+    GH_TOKEN=scoped-tok-' $(touch /tmp/fm-lab.7nLuVy/sim/pwned) `id`
+    -KRB5CCNAME
+    -MSYSTEM
+    -SSH_AGENT_PID
+    -SSH_ASKPASS
+    SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.ljUlgiNeXY/Listeners
+    -SSH_CONNECTION
+    -WINDOWID
+    -XAUTHORITY
+### $ bin/fm-spawn.sh lab-nosource <project> --backend orca --harness probe.sh
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.7nLuVy
+    warning: backend=orca resolves config/launch-env-allowlist names from the Orca terminal's own environment, not this home's; set config/launch-env-tmux-session to take them from a scoped tmux session
+    warning: /tmp/fm-lab.7nLuVy/data/lab-nosource/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-nosource
+    warning: /tmp/fm-lab.7nLuVy/data/lab-nosource/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+    notice: lab-nosource ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+    spawned lab-nosource harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-nosource worktree=/tmp/fm-lab.7nLuVy/sim/orca-worktrees/fm-lab-nosource
+### fm-spawn exit=0
+### orca worktree allocated: yes; orca terminal created: 1
+### metadata published: yes
+### text typed into Orca terminal:
+    cd -- '/tmp/fm-lab.7nLuVy/sim/orca-worktrees/fm-lab-nosource'
+    export GOTMPDIR=/tmp/fm-lab-nosource/gotmp
+    export COMPACT_ADVISER_DISABLE=1
+    export FM_TASK_ID=lab-nosource
+    . '/tmp/fm-lab-nosource+3f1e1c03ff92d7495528fbeda17ed842432f5db105d2cf7e4eb2e4fd6aae4569/launch.s1791949640.25671.28581.sh'
+    
+### staged launch files left under /tmp/fm-lab-nosource+*:
+    launch.s1791949640.25671.28581.sh
+### injection marker file exists: no
+### Orca pane term230000 capture:
+    The default interactive shell is now zsh.
+    To update your account to use zsh, please run `chsh -s /bin/zsh`.
+    For more details, please visit https://support.apple.com/kb/HT208050.
+    orca-pane$ cd -- '/tmp/fm-lab.7nLuVy/sim/orca-worktrees/fm-lab-nosource'
+    orca-pane$ export GOTMPDIR=/tmp/fm-lab-nosource/gotmp
+    orca-pane$ export COMPACT_ADVISER_DISABLE=1
+    orca-pane$ export FM_TASK_ID=lab-nosource
+    orca-pane$ . '/tmp/fm-lab-nosource+3f1e1c03ff92d7495528fbeda17ed842432f5db105d2cf7e4eb2e4fd6aae4569/launch.s1791949640.25671.28581.sh'
+    === worker environment (inside Orca pane) ===
+    LAUNCH FILE STILL PRESENT: /tmp/fm-lab-nosource+3f1e1c03ff92d7495528fbeda17ed842432f5db105d2cf7e4eb2e4fd6aae4569/launch.s1791949640.25671.28581.sh
+    GH_TOKEN=[personal-gh-token]
+    GH_CONFIG_DIR=[<unset>]
+    FM_LAB_UNSET=[<unset>]
+    SSH_AUTH_SOCK=[<unset>]
+    DATABASE_URL=[<unset>]
+    GIT_CONFIG_NOSYSTEM=[<unset>]
+    === end ===
+    orca-pane$

@@ -1,0 +1,42 @@
+### scenario: sendfail
+### config/launch-env-allowlist:
+    GH_TOKEN
+### config/launch-env-tmux-session: scoped-creds
+### scoped tmux session environment (tmux show-environment -t =scoped-creds):
+    -DISPLAY
+    -FM_LAB_UNSET
+    GH_CONFIG_DIR=/scoped/gh
+    GH_TOKEN=scoped-tok-' $(touch /tmp/fm-lab.i7Fq8s/sim/pwned) `id`
+    -KRB5CCNAME
+    -MSYSTEM
+    -SSH_AGENT_PID
+    -SSH_ASKPASS
+    SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.ljUlgiNeXY/Listeners
+    -SSH_CONNECTION
+    -WINDOWID
+    -XAUTHORITY
+### $ bin/fm-spawn.sh lab-sendfail <project> --backend orca --harness probe.sh
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.i7Fq8s
+    warning: /tmp/fm-lab.i7Fq8s/data/lab-sendfail/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-sendfail
+    warning: /tmp/fm-lab.i7Fq8s/data/lab-sendfail/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+    notice: lab-sendfail ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+    error: launch command could not be delivered to Orca terminal term792000; inspect window term792000
+### fm-spawn exit=1
+### orca worktree allocated: yes; orca terminal created: 1
+### metadata published: no
+### text typed into Orca terminal:
+    cd -- '/tmp/fm-lab.i7Fq8s/sim/orca-worktrees/fm-lab-sendfail'
+    export GOTMPDIR=/tmp/fm-lab-sendfail/gotmp
+    export COMPACT_ADVISER_DISABLE=1
+    export FM_TASK_ID=lab-sendfail
+### staged launch files left under /tmp/fm-lab-sendfail+*:
+### injection marker file exists: no
+### Orca pane term792000 capture:
+    The default interactive shell is now zsh.
+    To update your account to use zsh, please run `chsh -s /bin/zsh`.
+    For more details, please visit https://support.apple.com/kb/HT208050.
+    orca-pane$ cd -- '/tmp/fm-lab.i7Fq8s/sim/orca-worktrees/fm-lab-sendfail'
+    orca-pane$ export GOTMPDIR=/tmp/fm-lab-sendfail/gotmp
+    orca-pane$ export COMPACT_ADVISER_DISABLE=1
+    orca-pane$ export FM_TASK_ID=lab-sendfail
+    orca-pane$

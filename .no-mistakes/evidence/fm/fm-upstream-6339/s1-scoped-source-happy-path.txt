@@ -1,0 +1,56 @@
+### scenario: scoped
+### config/launch-env-allowlist:
+    GH_TOKEN
+    GH_CONFIG_DIR
+    FM_LAB_UNSET
+### config/launch-env-tmux-session: scoped-creds
+### scoped tmux session environment (tmux show-environment -t =scoped-creds):
+    -DISPLAY
+    -FM_LAB_UNSET
+    GH_CONFIG_DIR=/scoped/gh
+    GH_TOKEN=scoped-tok-' $(touch /tmp/fm-lab.OiaE5e/sim/pwned) `id`
+    -KRB5CCNAME
+    -MSYSTEM
+    -SSH_AGENT_PID
+    -SSH_ASKPASS
+    SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.ljUlgiNeXY/Listeners
+    -SSH_CONNECTION
+    -WINDOWID
+    -XAUTHORITY
+### $ bin/fm-spawn.sh lab-scoped <project> --backend orca --harness probe.sh
+    fm-gate-refuse: gate agent lifecycle permitted only against lab home /tmp/fm-lab.OiaE5e
+    warning: /tmp/fm-lab.OiaE5e/data/lab-scoped/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-scoped
+    warning: /tmp/fm-lab.OiaE5e/data/lab-scoped/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+    notice: lab-scoped ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+    spawned lab-scoped harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-scoped worktree=/tmp/fm-lab.OiaE5e/sim/orca-worktrees/fm-lab-scoped
+### fm-spawn exit=0
+### orca worktree allocated: yes; orca terminal created: 1
+### metadata published: yes
+### text typed into Orca terminal:
+    cd -- '/tmp/fm-lab.OiaE5e/sim/orca-worktrees/fm-lab-scoped'
+    export GOTMPDIR=/tmp/fm-lab-scoped/gotmp
+    export COMPACT_ADVISER_DISABLE=1
+    export FM_TASK_ID=lab-scoped
+    . '/tmp/fm-lab-scoped+22f2fa09a800221985a008e24932533b4dc3064f44cea1bdd4c0aefe0d7da1b9/launch.s1791949594.13720.410.sh'
+    
+### staged launch files left under /tmp/fm-lab-scoped+*:
+### injection marker file exists: no
+### Orca pane term133000 capture:
+    The default interactive shell is now zsh.
+    To update your account to use zsh, please run `chsh -s /bin/zsh`.
+    For more details, please visit https://support.apple.com/kb/HT208050.
+    orca-pane$ cd -- '/tmp/fm-lab.OiaE5e/sim/orca-worktrees/fm-lab-scoped'
+    orca-pane$ export GOTMPDIR=/tmp/fm-lab-scoped/gotmp
+    orca-pane$ export COMPACT_ADVISER_DISABLE=1
+    orca-pane$ export FM_TASK_ID=lab-scoped
+    orca-pane$ . '/tmp/fm-lab-scoped+22f2fa09a800221985a008e24932533b4dc3064f44cea1bdd4c0aefe0d7da1b9/launch.s1791949594.13720.410.sh'
+    === worker environment (inside Orca pane) ===
+    launch file removed before worker ran: yes
+    GH_TOKEN=[scoped-tok-' $(touch /tmp/fm-lab.OiaE5e/sim/pwned) `id`]
+    GH_CONFIG_DIR=[/scoped/gh]
+    FM_LAB_UNSET=[<unset>]
+    SSH_AUTH_SOCK=[<unset>]
+    DATABASE_URL=[<unset>]
+    GIT_CONFIG_NOSYSTEM=[1]
+    === end ===
+    orca-pane$
