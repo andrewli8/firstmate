@@ -370,8 +370,10 @@
 #   never terminal input, and the pane deletes that file as sourcing starts,
 #   before the worker executes; a deletion failure refuses the worker launch and
 #   keeps the interactive shell. Spawn waits up to 30 seconds for that deletion;
-#   a pane that never runs the command has the file removed and the spawn fails. The selector is not inherited into secondmate
-#   homes. This is not a filesystem sandbox; project and harness sandbox
+#   if the pane never ran the command or could not delete the file, spawn
+#   removes it, refuses the worker launch, and leaves the Orca terminal open.
+#   The selector is not inherited into secondmate homes. This is not a
+#   filesystem sandbox; project and harness sandbox
 #   settings still own access to personal credential files.
 # Claude permission mode (config/claude-permission-mode):
 #   One token selecting the permission flag every claude launch (ship, scout,
