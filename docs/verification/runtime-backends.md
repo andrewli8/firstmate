@@ -1984,7 +1984,7 @@ The real-tmux case uses a private socket and synthetic values.
 Without `tmux -u`, tmux's non-UTF-8 client output sanitized a multiline UTF-8 value; with it, the value survived unchanged under absent and C locales through sh, Bash, and zsh.
 `show-environment -t =<session>` reported the automatically populated `SSH_AUTH_SOCK`, which the snapshot excludes because only allowlisted names are read.
 A name present only in the server-global environment, or only as text inside another value, was refused.
-The fake-Orca cases execute the real staged launch file under synthetic personal credentials and cover refusal before allocation, file privacy and deletion, deletion-failure refusal that keeps the interactive pane with and without errexit, reclaiming a launch file the pane never ran while the terminal stays open, reclaiming it when HUP, INT or TERM interrupts the spawn during the consume wait or between text delivery and Enter, a pane that wins the deadline unlink race, and the missing-source warning.
+The fake-Orca cases execute the real staged launch file under synthetic personal credentials and cover refusal before allocation, file privacy and deletion, deletion-failure refusal that keeps the interactive pane with and without errexit, reclaiming a launch file the pane never ran while the terminal stays open, reclaiming it when HUP, INT or TERM interrupts the spawn after the file is published but before the launch command is sent, during the consume wait, or between text delivery and Enter, a pane that wins the deadline unlink race, and the missing-source warning.
 
 ## cmux
 
