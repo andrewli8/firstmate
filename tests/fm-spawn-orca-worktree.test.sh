@@ -329,6 +329,14 @@ EOF
       assert_contains "$result" 'cannot remove private launch file' "deletion failure must refuse before worker execution"
       assert_contains "$result" SHELL-STILL-ALIVE "deletion refusal killed the interactive $pane_shell pane"
       [ -f "$staged" ] || fail "failed deletion unexpectedly removed the private launch file"
+      mv "$staged" "$staged.reclaimed"
+      # shellcheck disable=SC2016 # The child pane expands the source path and its failure status.
+      result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
+        "$pane_shell" -i -c '. "$1"; fm_status=$?; [ "$fm_status" -ne 0 ] || exit 2; printf "\nSHELL-STILL-ALIVE\n"' _ "$staged.reclaimed" 2>&1)
+      expect_code 0 "$?" "a launch file reclaimed before the pane unlinked it must refuse the worker in $pane_shell"
+      assert_contains "$result" 'cannot remove private launch file' "a reclaimed launch file must refuse before worker execution"
+      assert_contains "$result" SHELL-STILL-ALIVE "a reclaimed launch file killed the interactive $pane_shell pane"
+      mv "$staged.reclaimed" "$staged"
       result=$(env -i HOME="$case_dir/user-home" PATH="$PATH" TERM=xterm \
         GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh FM_TEST_PERSONAL=personal-value \
         FM_TEST_NOT_SET=personal-value GIT_CONFIG_NOSYSTEM=0 LANG=personal-lang \
