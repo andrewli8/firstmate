@@ -5858,6 +5858,14 @@ if ! (umask 077 && printf '%s\n' "$LAUNCH" >"$LAUNCH_STAGE" &&
   exit 1
 fi
 SPAWN_STAGED_LAUNCH_FILE=$LAUNCH_FILE
+if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
+  # Bash runs the EXIT trap for an untrapped fatal signal with status 0, which
+  # abort cleanup reads as success, so exit with the signal's status instead
+  # until the pane has consumed the published launch file.
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+fi
 sleep 0.3
 spawn_orca_launch_send_fail() {
   rm -f -- "$LAUNCH_FILE" 2>/dev/null || true
@@ -5883,14 +5891,6 @@ spawn_orca_wait_launch_consumed() {
     sleep 0.2
   done
 }
-if [ "$ORCA_LAUNCH_ENV_ENABLED" = 1 ]; then
-  # Bash runs the EXIT trap for an untrapped fatal signal with status 0, which
-  # abort cleanup reads as success, so exit with the signal's status instead
-  # until the pane has consumed the delivered launch file.
-  trap 'exit 129' HUP
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-fi
 SPAWN_LAUNCH_SENT=1
 # errexit is on here: a failed send still exits, and Orca source mode first
 # removes the credential-bearing file the pane never received.

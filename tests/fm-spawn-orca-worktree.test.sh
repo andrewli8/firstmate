@@ -653,6 +653,78 @@ EOF
   done
 }
 
+# The spawn owns the credential-bearing file from the moment it publishes it, so
+# an interrupt before the launch command is sent must still remove it. A fake
+# sleep holds the spawn in the pause right after publishing.
+test_orca_interrupted_spawn_before_send_removes_launch_file() {
+  local sig id case_dir home fb pid status staged i want
+  for sig in TERM HUP INT; do
+    id="orca-env-interrupt-publish-$sig"
+    case_dir="$TMP_ROOT/$id"
+    home="$case_dir/home"
+    mkdir -p "$home/data/$id" "$home/state" "$home/config" "$home/projects"
+    touch "$home/state/.last-watcher-beat"
+    printf 'manual\n' > "$home/config/backlog-backend"
+    printf 'scoped-source\n' > "$home/config/launch-env-tmux-session"
+    printf 'GH_TOKEN\n' > "$home/config/launch-env-allowlist"
+    fm_git_init_commit "$case_dir/project"
+    cat > "$home/data/$id/brief.md" <<EOF
+# Task
+## Captain's intent
+Exercise an Orca spawn interrupted before launch delivery.
+
+## Firstmate spec
+Confirm the staged credential file is removed.
+EOF
+    fb=$(make_orca_fakebin "$case_dir")
+    printf '#!/bin/sh\necho "GH_TOKEN=synthetic-interrupt-token"\n' > "$fb/tmux"
+    cat > "$fb/sleep" <<SH
+#!/bin/sh
+if [ "\$1" = 0.3 ] && [ ! -e '$case_dir/published' ]; then
+  for f in /tmp/fm-$id+*/launch.*.sh; do
+    [ -f "\$f" ] || continue
+    printf '%s\n' "\$f" > '$case_dir/published'
+    i=0
+    while [ ! -e '$case_dir/release' ] && [ "\$i" -lt 100 ]; do /bin/sleep 0.1; i=\$((i + 1)); done
+  done
+fi
+exec /bin/sleep "\$@"
+SH
+    chmod +x "$fb/tmux" "$fb/sleep"
+    FM_ROOT_OVERRIDE='' FM_HOME="$home" HOME="$case_dir/user-home" \
+      FM_STATE_OVERRIDE="$home/state" FM_DATA_OVERRIDE="$home/data" \
+      FM_PROJECTS_OVERRIDE="$home/projects" FM_CONFIG_OVERRIDE="$home/config" \
+      FM_SPAWN_NO_GUARD=1 FM_TEST_ORCA_DIR="$case_dir" \
+      FM_TEST_ORCA_LOG="$case_dir/terminal.log" \
+      PATH="$fb:$PATH" python3 -c 'import os,signal,sys; signal.signal(signal.SIGINT, signal.SIG_DFL); os.execvp(sys.argv[1], sys.argv[1:])' \
+      "$SPAWN" "$id" "$case_dir/project" --mode direct-PR --yolo off --backend orca \
+      --harness "touch '$case_dir/worker-ran'" > "$case_dir/spawn.log" 2>&1 &
+    pid=$!
+    for ((i = 0; i < 300; i++)); do
+      [ ! -s "$case_dir/published" ] || break
+      kill -0 "$pid" 2>/dev/null || break
+      /bin/sleep 0.1
+    done
+    staged=$(cat "$case_dir/published" 2>/dev/null)
+    if [ -z "$staged" ] || [ ! -f "$staged" ] || ! kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null
+      touch "$case_dir/release"
+      wait "$pid"
+      fail "$sig: the spawn was not paused after publishing its launch file: $(cat "$case_dir/spawn.log")"
+    fi
+    kill -"$sig" "$pid"
+    touch "$case_dir/release"
+    wait "$pid"
+    status=$?
+    case "$sig" in TERM) want=143 ;; HUP) want=129 ;; INT) want=130 ;; esac
+    expect_code "$want" "$status" "publish/$sig: interrupted spawn must exit with the signal status: $(cat "$case_dir/spawn.log")"
+    [ ! -e "$staged" ] || fail "publish/$sig: interrupted spawn left credentials in $staged"
+    ! grep -q "/launch\." "$case_dir/terminal.log" 2>/dev/null || fail "publish/$sig: spawn sent the launch command after the interrupt"
+    [ ! -e "$case_dir/worker-ran" ] || fail "publish/$sig: the worker ran after the interrupt"
+    pass "an Orca spawn interrupted by $sig before sending the launch command removes its launch file"
+  done
+}
+
 # tmux versions differ on whether they keep invalid UTF-8, so pin the adapter
 # itself: whatever bytes tmux reports must reach the shell assignment unchanged.
 test_orca_snapshot_keeps_raw_bytes_tmux_reports() {
@@ -802,6 +874,7 @@ test_orca_allowlist_without_source_warns
 test_orca_spawn_waits_for_a_slow_pane_before_a_later_failure
 test_orca_unrun_launch_file_is_reclaimed
 test_orca_interrupted_spawn_reclaims_launch_file
+test_orca_interrupted_spawn_before_send_removes_launch_file
 test_orca_launch_file_delete_failure_keeps_terminal
 test_orca_pane_wins_launch_file_race_at_deadline
 test_orca_snapshot_keeps_raw_bytes_tmux_reports
