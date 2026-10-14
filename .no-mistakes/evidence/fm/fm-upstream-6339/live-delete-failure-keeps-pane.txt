@@ -1,0 +1,20 @@
+# Scenario: Orca pane cannot delete the launch file: worker refused, interactive pane kept (driven through fm-spawn)
+pane PATH has a failing rm first ($LAB/rmfail/rm)
+fm-spawn exit=1
+error: Orca terminal %6 did not run the launch command or could not remove the launch file; refused the worker launch; inspect window %6
+launch dir after spawn: []
+status file: failed [at=1791951433]: Orca terminal %6 did not run the launch command or could not remove the launch file; refused the worker launch
+terminal close calls for %6: 0
+pane alive: yes
+worker started: no
+## pane transcript
+pane$ cd -- '$LAB/orca-worktrees/fm-lab-rmfail'
+pane$ export GOTMPDIR=/tmp/fm-lab-rmfail/gotmp
+pane$ export COMPACT_ADVISER_DISABLE=1
+pane$ export FM_TASK_ID=lab-rmfail
+pane$ . '/tmp/fm-lab-rmfail+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951427.95588.19233.sh'
+fake-rm-failure
+error: cannot remove private launch file; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$$
+SHELL-STILL-ALIVE-95950
+pane$

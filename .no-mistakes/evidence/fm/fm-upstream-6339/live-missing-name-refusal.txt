@@ -1,0 +1,9 @@
+# Scenario: allowlisted name absent from session (present only in tmux server-global env) refuses before allocation
+global env: FM_LAB_GLOBAL_ONLY=global-value
+fm-spawn exit=1
+error: cannot snapshot configured tmux launch environment (required name FM_LAB_GLOBAL_ONLY); refusing Orca launch
+orca windows before/after:        3/       3
+orca worktrees before/after:        2/       2
+meta published: no
+orca calls for lab-missing: 0
+output mentions global-value: 0

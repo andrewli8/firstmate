@@ -1,0 +1,4 @@
+# Scenario: selector names a session that does not exist
+fm-spawn exit=1
+error: cannot snapshot configured tmux launch environment; refusing Orca launch
+orca calls for lab-nosession: 0

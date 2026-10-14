@@ -1,0 +1,29 @@
+# Scenario: Orca pane busy past the launch-file deadline: spawn reclaims the file, refuses, keeps the pane
+fm-spawn exit=1
+warning: $LAB/data/lab-timeout/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-timeout
+warning: $LAB/data/lab-timeout/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: lab-timeout ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: Orca terminal %5 did not run the launch command or could not remove the launch file; refused the worker launch; inspect window %5
+launch dir after spawn exit: []
+status file: failed [at=1791951408]: Orca terminal %5 did not run the launch command or could not remove the launch file; refused the worker launch
+terminal close calls for %5: 0
+pane %5 alive: yes
+worker started: no
+## pane transcript after busy command finished
+pane$ sleep 8
+cd -- '$LAB/orca-worktrees/fm-lab-timeout'
+export GOTMPDIR=/tmp/fm-lab-timeout/gotmp
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=lab-timeout
+. '/tmp/fm-lab-timeout+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951405.88151.32477.sh'
+pane$ cd -- '$LAB/orca-worktrees/fm-lab-timeout'
+export GOTMPDIR=/tmp/fm-lab-timeout/gotmp
+export COMPACT_ADVISER_DISABLE=1
+export FM_TASK_ID=lab-timeout
+. '/tmp/fm-lab-timeout+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951405.88151.32477.sh'
+pane$ export GOTMPDIR=/tmp/fm-lab-timeout/gotmp
+pane$ export COMPACT_ADVISER_DISABLE=1
+pane$ export FM_TASK_ID=lab-timeout
+pane$ . '/tmp/fm-lab-timeout+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951405.88151.32477.sh'
+bash: /tmp/fm-lab-timeout+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951405.88151.32477.sh: No such file or directory
+pane$

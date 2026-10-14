@@ -1,0 +1,7 @@
+# Scenario: explicit -NAME record in source session leaves name unset even though Orca pane has a personal value
+source record: -GH_CONFIG_DIR
+pane ambient: GH_CONFIG_DIR=personal-gh
+spawned lab-unset harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-unset worktree=$LAB/orca-worktrees/fm-lab-unset
+worker GH_CONFIG_DIR lines: []
+worker GH_TOKEN: GH_TOKEN=scoped-tök...
+launch files at worker start: none

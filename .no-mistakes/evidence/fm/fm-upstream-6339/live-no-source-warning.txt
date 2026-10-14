@@ -1,0 +1,6 @@
+# Scenario: allowlist without config/launch-env-tmux-session on Orca warns and keeps destination expansion
+fm-spawn exit=0
+warning: backend=orca resolves config/launch-env-allowlist names from the Orca terminal's own environment, not this home's; set config/launch-env-tmux-session to take them from a scoped tmux session
+spawned lab-nosource harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-nosource worktree=$LAB/orca-worktrees/fm-lab-nosource
+worker GH_TOKEN: GH_TOKEN=personal-token
+worker GIT_CONFIG_NOSYSTEM: []

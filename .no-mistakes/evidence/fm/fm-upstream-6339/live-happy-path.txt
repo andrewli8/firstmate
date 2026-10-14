@@ -1,0 +1,41 @@
+# Scenario: scoped tmux source replaces Orca pane ambient credentials (live lab)
+## lab tmux source session (scoped-src) local env, tmux -u show-environment
+GH_TOKEN=scoped-tök€n-'$(touch /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.6ABcZP/injected)
+line2
+GH_CONFIG_DIR=scoped-gh
+SSH_AUTH_SOCK=/scoped/agent.sock
+## Orca pane ambient env (set by shim at terminal create): GH_TOKEN=personal-token GH_CONFIG_DIR=personal-gh SSH_AUTH_SOCK=/personal/agent.sock
+## fm-spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home $LAB
+warning: $LAB/data/lab-happy/launch-brief.md records no ship branch; defaulting to legacy branch fm/lab-happy
+warning: $LAB/data/lab-happy/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: lab-happy ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned lab-happy harness=sh kind=ship mode=direct-PR yolo=off window=fm-lab-happy worktree=$LAB/orca-worktrees/fm-lab-happy
+## Text sent to the Orca terminal (no values)
+SEND %2 text=cd\ --\ \'$LAB/orca-worktrees/fm-lab-happy\' enter=1
+SEND %2 text=export\ GOTMPDIR=/tmp/fm-lab-happy/gotmp enter=1
+SEND %2 text=export\ COMPACT_ADVISER_DISABLE=1 enter=1
+SEND %2 text=export\ FM_TASK_ID=lab-happy enter=1
+SEND %2 text=.\ \'/tmp/fm-lab-happy+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951345.72081.3046.sh\' enter=0
+SEND %2 text='' enter=1
+## Pane transcript
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+pane$ cd -- '$LAB/orca-worktrees/fm-lab-happy'
+pane$ export GOTMPDIR=/tmp/fm-lab-happy/gotmp
+pane$ export COMPACT_ADVISER_DISABLE=1
+pane$ export FM_TASK_ID=lab-happy
+pane$ . '/tmp/fm-lab-happy+8e1d2ca8c97ca745fed4ec4ea46a480e7332edc2cd68c9b7da3c30566a09b6d1/launch.s1791951345.72081.3046.sh'
+## Worker (fake harness) view at start
+launch-files-present-at-worker-start:
+none
+FM_TASK_ID=lab-happy
+GH_CONFIG_DIR=scoped-gh
+GH_TOKEN=scoped-tök€n-'$(touch /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.6ABcZP/injected)
+GIT_CONFIG_NOSYSTEM=1
+GH_TOKEN continuation line: GIT_CONFIG_COUNT=1
+SSH_AUTH_SOCK lines in worker env: 0
+injected marker exists: no
+launch dir mode: 700 contents: []
+multiline second line 'line2' present in worker env (env|sort splits it): 1
