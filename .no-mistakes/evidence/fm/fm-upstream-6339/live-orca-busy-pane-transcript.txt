@@ -1,0 +1,65 @@
+########## S3 HUP after launch line + Enter delivered while pane busy (not yet consumed); pane: bash set -e
+before signal: launch file present; spawn running
+right after HUP: launch file removed
+waiting for the busy pane to free up and run the queued launch line...
+spawn exit status: 129
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/data/live-consume/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-consume
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/data/live-consume/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-consume ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch; inspect window term-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/run/s3/orca-worktrees/fm-live-consume'|enter=1
+export GOTMPDIR=/tmp/fm-live-consume/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-consume|enter=1
+if [ -e '/tmp/fm-live-consume+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992866.61712.31650.sh' ]; then . '/tmp/fm-live-consume+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992866.61712.31650.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+failed [at=1791992869]: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch
+
+staged launch file: /tmp/fm-live-consume+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992866.61712.31650.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+error: private launch file was already removed; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S5 pane never runs the line within the deadline (FM_ORCA_LAUNCH_CONSUME_POLLS=10 ~2s); pane: zsh set -e
+right after spawn exit: launch file removed
+waiting for the busy pane to run the queued launch line...
+spawn exit status: 1
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/data/live-deadline/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-deadline
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/data/live-deadline/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-deadline ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: Orca terminal term-1 did not run the launch command or could not remove the launch file; refused the worker launch; inspect window term-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.Jps60o/run/s5/orca-worktrees/fm-live-deadline'|enter=1
+export GOTMPDIR=/tmp/fm-live-deadline/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-deadline|enter=1
+if [ -e '/tmp/fm-live-deadline+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992899.67073.32648.sh' ]; then . '/tmp/fm-live-deadline+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992899.67073.32648.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+failed [at=1791992903]: Orca terminal term-1 did not run the launch command or could not remove the launch file; refused the worker launch
+
+staged launch file: /tmp/fm-live-deadline+fb79e46794ab12621aa4e9a15995362f67f18812b7aa007f92798b70c3797394/launch.s1791992899.67073.32648.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+error: private launch file was already removed; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+lab removed: yes

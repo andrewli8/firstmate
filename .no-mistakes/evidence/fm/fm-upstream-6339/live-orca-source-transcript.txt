@@ -1,0 +1,404 @@
+NOTE: S3 and S5 in this run were mis-timed by the harness (signal hit before the launch line; pane freed before the deadline) and are superseded by live-orca-busy-pane-transcript.txt. The trailing rm errors come from the first cleanup, which missed read-only git-hooks dirs; the lab was removed afterwards with chmod -R u+w.
+
+########## S1 happy path, pane: /opt/homebrew/bin/bash --norc --noprofile -i (set -e)
+spawn exit status: 0
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-1/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-ok-1
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-ok-1 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned live-ok-1 harness=sh kind=ship mode=direct-PR yolo=off window=fm-live-ok-1 worktree=/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-1/orca-worktrees/fm-live-ok-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-1/orca-worktrees/fm-live-ok-1'|enter=1
+export GOTMPDIR=/tmp/fm-live-ok-1/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-ok-1|enter=1
+if [ -e '/tmp/fm-live-ok-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992627.12698.9401.sh' ]; then . '/tmp/fm-live-ok-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992627.12698.9401.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+
+staged launch file: /tmp/fm-live-ok-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992627.12698.9401.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker GH_TOKEN=lab-scoped-token
+worker DATABASE_URL=unset
+worker DROPPED_NAME=unset
+worker GIT_CONFIG_NOSYSTEM=1
+pane: alive
+--- pane screen (tail)
+afd031ad00bd8ce2e36e2abc4/launch.s1791992627.12698.9401.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S2 TERM after launch text delivered, before Enter; pane: /opt/homebrew/bin/bash --norc --noprofile -i (set -e)
+before signal: launch file present
+operator now presses Enter in the Orca terminal (line was already typed)
+spawn exit status: 143
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-1/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-enter-1
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-enter-1 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch; inspect window term-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s2-1/orca-worktrees/fm-live-enter-1'|enter=1
+export GOTMPDIR=/tmp/fm-live-enter-1/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-enter-1|enter=1
+if [ -e '/tmp/fm-live-enter-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992633.13908.6547.sh' ]; then . '/tmp/fm-live-enter-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992633.13908.6547.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+--- task status
+failed [at=1791992683]: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch
+
+staged launch file: /tmp/fm-live-enter-1+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992633.13908.6547.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+error: private launch file was already removed; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S1 happy path, pane: /bin/bash --norc --noprofile -i (set -e)
+spawn exit status: 0
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-2/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-ok-2
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-2/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-ok-2 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned live-ok-2 harness=sh kind=ship mode=direct-PR yolo=off window=fm-live-ok-2 worktree=/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-2/orca-worktrees/fm-live-ok-2
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-2/orca-worktrees/fm-live-ok-2'|enter=1
+export GOTMPDIR=/tmp/fm-live-ok-2/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-ok-2|enter=1
+if [ -e '/tmp/fm-live-ok-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992688.21650.14706.sh' ]; then . '/tmp/fm-live-ok-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992688.21650.14706.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+
+staged launch file: /tmp/fm-live-ok-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992688.21650.14706.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker GH_TOKEN=lab-scoped-token
+worker DATABASE_URL=unset
+worker DROPPED_NAME=unset
+worker GIT_CONFIG_NOSYSTEM=1
+pane: alive
+--- pane screen (tail)
+aafd031ad00bd8ce2e36e2abc4/launch.s1791992688.21650.14706.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; f
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S2 TERM after launch text delivered, before Enter; pane: /bin/bash --norc --noprofile -i (set -e)
+before signal: launch file present
+operator now presses Enter in the Orca terminal (line was already typed)
+spawn exit status: 143
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-2/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-enter-2
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-2/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-enter-2 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch; inspect window term-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s2-2/orca-worktrees/fm-live-enter-2'|enter=1
+export GOTMPDIR=/tmp/fm-live-enter-2/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-enter-2|enter=1
+if [ -e '/tmp/fm-live-enter-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992694.22973.1470.sh' ]; then . '/tmp/fm-live-enter-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992694.22973.1470.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+--- task status
+failed [at=1791992743]: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch
+
+staged launch file: /tmp/fm-live-enter-2+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992694.22973.1470.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+error: private launch file was already removed; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S1 happy path, pane: /bin/zsh -f -i (set -e)
+spawn exit status: 0
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-3/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-ok-3
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-ok-3/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-ok-3 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned live-ok-3 harness=sh kind=ship mode=direct-PR yolo=off window=fm-live-ok-3 worktree=/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-3/orca-worktrees/fm-live-ok-3
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s1-3/orca-worktrees/fm-live-ok-3'|enter=1
+export GOTMPDIR=/tmp/fm-live-ok-3/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-ok-3|enter=1
+if [ -e '/tmp/fm-live-ok-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992748.39241.23097.sh' ]; then . '/tmp/fm-live-ok-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992748.39241.23097.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+
+staged launch file: /tmp/fm-live-ok-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992748.39241.23097.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker GH_TOKEN=lab-scoped-token
+worker DATABASE_URL=unset
+worker DROPPED_NAME=unset
+worker GIT_CONFIG_NOSYSTEM=1
+pane: alive
+--- pane screen (tail)
+aafd031ad00bd8ce2e36e2abc4/launch.s1791992748.39241.23097.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; f
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S2 TERM after launch text delivered, before Enter; pane: /bin/zsh -f -i (set -e)
+before signal: launch file present
+operator now presses Enter in the Orca terminal (line was already typed)
+spawn exit status: 143
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-3/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-enter-3
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-enter-3/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-enter-3 ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+error: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch; inspect window term-1
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s2-3/orca-worktrees/fm-live-enter-3'|enter=1
+export GOTMPDIR=/tmp/fm-live-enter-3/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-enter-3|enter=1
+if [ -e '/tmp/fm-live-enter-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992755.41880.3435.sh' ]; then . '/tmp/fm-live-enter-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992755.41880.3435.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+--- task status
+failed [at=1791992804]: spawn ended before Orca terminal term-1 ran the launch command; removed the launch file and refused the worker launch
+
+staged launch file: /tmp/fm-live-enter-3+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992755.41880.3435.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+error: private launch file was already removed; refusing worker launch
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S3 HUP while pane is busy (launch delivered with Enter, not yet consumed); pane: bash set -e
+before signal: launch file absent
+/tmp/fmlive-scripts/scenarios.sh: line 28: 50267 Hangup: 1                  env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS -u FM_ROOT_OVERRIDE -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_CONFIG_OVERRIDE -u FM_PROJECTS_OVERRIDE FM_HOME="$LAB" FM_SPAWN_NO_GUARD=1 LIVE_DIR="$d" TMUX="$SOCK,0,0" GH_TOKEN=spawner-ambient-token PATH="$FB:$PATH" "$@" python3 -c 'import os,signal,sys; signal.signal(signal.SIGINT, signal.SIG_DFL); os.execvp(sys.argv[1], sys.argv[1:])' "$SPAWN" "$id" "$d/project" --mode direct-PR --yolo off --backend orca --harness "/bin/sh '$d/probe.sh'" > "$d/spawn.log" 2>&1
+spawn exit status: 129
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-consume/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-consume
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-consume/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-consume ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s3/orca-worktrees/fm-live-consume'|enter=1
+--- task status
+
+staged launch file: none
+orca terminal: closed
+--- worker
+worker did not run
+pane: alive
+--- pane screen (tail)
+pane$ cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s3/orca-worktrees/fm-live-consume'
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S4 INT in the window right after the launch file is published, before any send
+published: /tmp/fm-live-publish+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992819.53489.2245.sh (present)
+spawn exit status: 130
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-publish/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-publish
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-publish/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-publish ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s4/orca-worktrees/fm-live-publish'|enter=1
+export GOTMPDIR=/tmp/fm-live-publish/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-publish|enter=1
+--- task status
+
+staged launch file: none
+orca terminal: left open
+--- worker
+worker did not run
+published file after INT: removed
+
+########## S5 pane never runs the line: consume deadline reclaims (FM_ORCA_LAUNCH_CONSUME_POLLS=10); pane: zsh set -e
+spawn exit status: 0
+--- spawn output
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-deadline/launch-brief.md records no ship branch; defaulting to legacy branch fm/live-deadline
+warning: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/data/live-deadline/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode direct-PR - confirm its definition of done matches
+notice: live-deadline ships mode=direct-PR while the standing posture for project is no-mistakes - less rigor than the captain's standing posture; proceed only on a current explicit captain instruction or an intake judgment you can state
+spawned live-deadline harness=sh kind=ship mode=direct-PR yolo=off window=fm-live-deadline worktree=/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s5/orca-worktrees/fm-live-deadline
+--- terminal sends (text|enter)
+cd -- '/var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/run/s5/orca-worktrees/fm-live-deadline'|enter=1
+export GOTMPDIR=/tmp/fm-live-deadline/gotmp|enter=1
+export COMPACT_ADVISER_DISABLE=1|enter=1
+export FM_TASK_ID=live-deadline|enter=1
+if [ -e '/tmp/fm-live-deadline+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992824.55184.3662.sh' ]; then . '/tmp/fm-live-deadline+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992824.55184.3662.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi|enter=0
+|enter=1
+--- task status
+
+staged launch file: /tmp/fm-live-deadline+cb4eba267ccd282aa35e6721f5d0a069d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992824.55184.3662.sh
+launch file: removed
+orca terminal: left open
+--- worker
+worker GH_TOKEN=lab-scoped-token
+worker DATABASE_URL=unset
+worker DROPPED_NAME=unset
+worker GIT_CONFIG_NOSYSTEM=1
+pane: alive
+--- pane screen (tail)
+9d392c1aafd031ad00bd8ce2e36e2abc4/launch.s1791992824.55184.3662.sh' || true; else echo 'error: private launch file was already removed; refusing worker launch' >&2; fi
+pane$ echo SHELL-STILL-ALIVE-$((40+2))
+SHELL-STILL-ALIVE-42
+pane$
+
+########## S6 allowlisted name missing from the source session refuses before Orca allocates
+spawn exit status: 1
+fm-gate-refuse: gate agent lifecycle permitted only against lab home /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre
+error: cannot snapshot configured tmux launch environment (required name NOT_IN_SESSION); refusing Orca launch
+orca worktree: not created
+terminal input: none
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-deadline.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-3.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-2.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-1.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-2.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-enter-1.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-consume.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-rebase: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-auto-gc: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-merge-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/post-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/sendemail-validate: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/applypatch-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/prepare-commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/post-checkout: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/post-applypatch: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/post-rewrite: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/commit-msg: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-push: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/post-merge: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks/pre-commit: Permission denied
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state/live-ok-3.git-hooks: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre/state: Directory not empty
+rm: /var/folders/q8/ntw5dd652s7g2_3swp0d225w0000gn/T//fm-lab.PraCre: Directory not empty
