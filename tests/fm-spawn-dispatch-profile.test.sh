@@ -476,7 +476,7 @@ test_launch_preserves_inherited_git_config() {
   rec=$(make_spawn_case "$id" codex "$id")
   read_case_record "$rec"
   out=$(run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" \
-    "$id" "$PROJ_DIR" --harness 'git config --get-all credential.helper; git config --get core.hooksPath')
+    "$id" "$PROJ_DIR" --harness 'echo WORKER-RAN >&2; git config --get-all credential.helper; git config --get core.hooksPath')
   status=$?
   expect_code 0 "$status" "Git configuration probe should spawn: $out"
   launch=$(cat "$LAUNCH_LOG")
@@ -496,6 +496,7 @@ test_launch_preserves_inherited_git_config() {
     result=$(isolated_pane_env GIT_CONFIG_COUNT=bad "$pane_shell" -c "$launch" 2>&1)
     status=$?
     [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched"
+    assert_not_contains "$result" WORKER-RAN "an invalid Git config count still started the worker in $pane_shell"
     for count in bad 2147483647; do
       # shellcheck disable=SC2016 # The child pane expands its own arguments and source status.
       result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" "$pane_shell" -i -c \
@@ -504,6 +505,7 @@ test_launch_preserves_inherited_git_config() {
       expect_code 0 "$status" "invalid count must preserve the interactive $pane_shell pane"
       assert_contains "$result" 'error: ' "count refusal must remain visible in $pane_shell"
       assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive $pane_shell pane"
+      assert_not_contains "$result" WORKER-RAN "count refusal still started the worker in $pane_shell"
     done
   done
   # A fish pane sources the same launch file, so fish runs the same append and
@@ -520,6 +522,7 @@ test_launch_preserves_inherited_git_config() {
     result=$(isolated_pane_env GIT_CONFIG_COUNT=bad fish -c "source '$launch_file'" 2>&1)
     status=$?
     [ "$status" -ne 0 ] || fail "an invalid Git config count silently launched in fish"
+    assert_not_contains "$result" WORKER-RAN "an invalid Git config count still started the worker in fish"
     for count in bad 2147483647; do
       result=$(isolated_pane_env GIT_CONFIG_COUNT="$count" fish -i -c \
         "source '$launch_file'; and exit 2; printf '\nSHELL-STILL-ALIVE\n'" 2>&1)
@@ -527,6 +530,7 @@ test_launch_preserves_inherited_git_config() {
       expect_code 0 "$status" "invalid count must preserve the interactive fish pane"
       assert_contains "$result" 'error: ' "count refusal must remain visible in fish"
       assert_contains "$result" SHELL-STILL-ALIVE "count refusal killed the interactive fish pane"
+      assert_not_contains "$result" WORKER-RAN "count refusal still started the worker in fish"
     done
   else
     prefix=$(fm_test_launch_git_prefix "$launch")
