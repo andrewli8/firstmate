@@ -5837,7 +5837,9 @@ spawn_orca_wait_launch_consumed() {
   while [ -e "$LAUNCH_FILE" ]; do
     i=$((i + 1))
     if [ "$i" -gt "$max" ]; then
-      rm -f -- "$LAUNCH_FILE" 2>/dev/null || true
+      if ! rm -- "$LAUNCH_FILE" 2>/dev/null && [ ! -e "$LAUNCH_FILE" ] && [ ! -L "$LAUNCH_FILE" ]; then
+        return 0
+      fi
       kimi_spawn_fail "Orca terminal $T did not run the launch command or could not remove the launch file; refused the worker launch"
       exit 1
     fi
