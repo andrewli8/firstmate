@@ -26,9 +26,8 @@ Open the Orca app to watch a task's terminal.
 Routine supervision uses the recorded endpoint through `bin/fm-peek.sh <id>` and `FM_HOME=<home> bin/fm-send.sh <id> '<text>'`.
 Enter and Ctrl-C are supported; Escape is not.
 
-When scoped worker credentials currently live in a tmux session, configure the [Orca environment source](configuration.md#orca-environment-source-configlaunch-env-tmux-session) before migrating those launches.
-An allowlist alone cannot provision values in an Orca terminal.
-The opt-in source excludes ambient destination credentials and retains the existing project/harness filesystem sandbox boundary.
+`config/launch-env-allowlist` alone cannot scope worker credentials on Orca, because allowlisted values resolve from the Orca terminal's own environment.
+When scoped worker credentials live in a tmux session, configure the [Orca environment source](configuration.md#orca-environment-source-configlaunch-env-tmux-session).
 
 ## Task shape and metadata
 
