@@ -1,0 +1,5 @@
+## fm_exec_timed (exec-style) under stock macOS /bin/bash 3.2 with set -u, called from subshells
+bash=3.2.57(1)-release
+timed-ok
+rc=0
+timeout rc=124 elapsed=1s

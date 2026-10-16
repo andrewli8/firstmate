@@ -1,0 +1,28 @@
+## fm-afk-contract enter in disposable lab home (macOS BSD date)
+Away posture recorded at 2026-10-16T03:24:12Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 1 concurrent workers.
+Away posture (recorded):
+  entered: 2026-10-16T03:24:12Z
+  expected return: not given
+  spend cap: 1 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+enter rc=141
+entered=2026-10-16T03:24:12Z
+entered_epoch=1792121052
+date -u -r epoch => 2026-10-16T03:24:12Z
+
+## same with GNU date first on PATH (Linux-like)
+enter rc=0
+entered=2026-10-16T03:24:12Z
+entered_epoch=1792121052
+gdate -u -d @epoch => 2026-10-16T03:24:12Z
+
+## fmx_context_registry_mtime and dir_mode
+expected mtime=1577952245 mode=750
+BSD stat on PATH:
+  fmx_context_registry_mtime=1577952245 rc=0
+  dir_mode=750 rc=0
+  missing-file rc=1
+GNU stat first on PATH (stat (GNU coreutils) 9.9):
+  fmx_context_registry_mtime=1577952245 rc=0
+  dir_mode=750 rc=0
+  missing-file rc=1
