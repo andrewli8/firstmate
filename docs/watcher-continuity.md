@@ -248,6 +248,10 @@ An acknowledged episode does not freeze the generation, because the next downtim
 It uses the `fm_lease_actor` identity owned by `bin/fm-lease-lib.sh`.
 The Pi branch extension injects its branch actor into its own bash tool calls.
 
+Only a main drain begins handling a recovery episode.
+A branch handles only its granted rows, and whoever started its turn already confirmed that close as handling, so a branch drain leaves the marker as it finds it.
+A close that lands while a branch turn runs therefore stays pending downtime, which is what lets the Claude Stop hook deliver it to an idle main.
+
 ### Claiming rows
 
 Every presented row is claimed to exactly one actor under the durable queue lock.
@@ -348,6 +352,8 @@ The same suite pins the counted-equals-presentable invariant against `bin/fm-gua
 Branch acknowledgement retiring the check-row receipts of exactly its granted sequences is pinned by `tests/fm-wake-queue.test.sh` for the secondmate stall receipt and by `tests/fm-inactive-reconcile.test.sh` for the inactive-outcome receipt.
 
 `tests/fm-pi-branch-extension.test.sh` pins extension-side classification, claim publication and release, and the pre-drain recheck.
+
+`tests/fm-supervision-host.test.sh`'s close-before-the-branch-drain cases run the real Stop hook, host, watcher, and drain, and pin that a main-only close landing before a branch turn drains still rewakes an idle main, after a captain outcome and after a routine turn.
 
 ## Arm-layer cycle contract
 

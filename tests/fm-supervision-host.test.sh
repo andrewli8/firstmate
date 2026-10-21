@@ -58,6 +58,9 @@ FAKE_CLAUDE="$FAKEBIN/claude"
 #               error the latch counts)
 #   hang        before anything else, start a descendant in a process group of
 #               its own, then block
+# Independent of the mode, while $FM_HOME/stub-drain-wait exists the stub waits
+# for $FM_HOME/stub-drain-go before its first drain, so a test can land a close
+# between the turn's start and the branch's drain.
 STUB="$TMP_ROOT/engine-stub"
 cat > "$STUB" <<'SH'
 #!/usr/bin/env bash
@@ -80,6 +83,9 @@ if [ "$mode" = hang ]; then
   printf '%s\n' "$!" > "$FM_HOME/orphan-pid"
   sleep "$FM_TEST_STUB_MAX_BLOCK_SECONDS"
   exit 0
+fi
+if [ -e "$FM_HOME/stub-drain-wait" ]; then
+  while [ ! -e "$FM_HOME/stub-drain-go" ]; do sleep 0.05; done
 fi
 drain=$("$FM_REPO/bin/fm-wake-drain.sh" 2>&1)
 printf '%s\n' "$drain" > "$FM_HOME/engine-drain.$n"
@@ -1333,6 +1339,47 @@ test_successor_close_during_main_turn_is_delivered_at_the_next_turn_end() {
   assert_contains "$drained" 'which region?' "the successor's close must reach main's drain"
   watcher_live "$home" || fail "successor close: the next turn end left no watcher"
   pass "host+hook: a successor close that lands during main's turn is delivered at the next turn end"
+}
+
+# The live failure (2026-10-20, twice): the successor the host started for an
+# engine turn closed on a main-only decision before the branch's drain ran, and
+# that drain marked the recovery episode as handled. When the host then woke
+# main (a captain outcome, or the decision passed through after a routine
+# turn), the Stop hook's rewake commit refused in silence, so an idle primary
+# was never woken and the fleet sat until the captain typed.
+close_lands_before_the_branch_drain() {  # <name> <stub-mode>
+  local home first successor drained
+  home=$(make_primary_home "$1")
+  # This case runs an engine turn from the primary root, whose prompt reads the skills.
+  ln -s "$ROOT/.agents" "$home/.agents"
+  echo "$2" > "$home/stub-mode"
+  : > "$home/stub-drain-wait"
+  start_hook_session "$home"
+  turn_end "$home"
+  wait_until 150 watcher_live "$home" || fail "$1: the Stop hook never started a watcher cycle: $(cat "$home/hook.err" 2>/dev/null)"
+  first=$(cat "$home/state/.watch.lock/pid")
+  append_status "$home" 'step one'
+  wait_until 250 test -e "$home/engine-call.1" || fail "$1: the engine turn never started: $(cat "$home/state/.supervision-host.log")"
+  wait_until 150 bash -c 'p=$(cat "$1" 2>/dev/null) && [ "$p" != "$2" ] && kill -0 "$p" 2>/dev/null' _ "$home/state/.watch.lock/pid" "$first" \
+    || fail "$1: the host started no successor watcher for its turn"
+  successor=$(cat "$home/state/.watch.lock/pid")
+  append_status "$home" 'which export format?' needs-decision
+  wait_until 250 bash -c '! kill -0 "$1" 2>/dev/null' _ "$successor" || fail "fixture: the successor did not close on the decision"
+  : > "$home/stub-drain-go"
+  wait_until 250 hook_exited "$home" || fail "$1: the Stop hook never closed: $(cat "$home/state/.supervision-host.log")"
+  assert_rewoke_main "$home" "$1"
+  drained=$(main_drain "$home")
+  assert_contains "$drained" 'which export format?' "$1: the decision that closed the successor must reach main's drain"
+}
+
+test_claude_stop_hook_delivers_a_branch_outcome_after_a_close_before_the_branch_drain() {
+  close_lands_before_the_branch_drain hook-close-before-drain-captain captain
+  pass "host+hook: a captain outcome rewakes main although a decision closed the successor before the branch drained"
+}
+
+test_claude_stop_hook_delivers_a_pass_through_after_a_close_before_the_branch_drain() {
+  close_lands_before_the_branch_drain hook-close-before-drain-routine handle
+  pass "host+hook: a decision that closed the successor before the branch drained rewakes main after the routine turn"
 }
 
 # The captain returns after the loop accepted a decision close away but before
@@ -2655,6 +2702,8 @@ test_claude_stop_hook_runs_the_host_without_the_file_and_off_opts_out
 test_claude_stop_hook_delivers_a_close_that_turns_main_only_at_its_turn
 test_claude_stop_hook_notifies_when_at_turn_downtime_write_fails
 test_successor_close_during_main_turn_is_delivered_at_the_next_turn_end
+test_claude_stop_hook_delivers_a_branch_outcome_after_a_close_before_the_branch_drain
+test_claude_stop_hook_delivers_a_pass_through_after_a_close_before_the_branch_drain
 test_primary_without_a_verified_mirror_runs_away_only
 test_attended_wake_carries_the_dialog_mirror
 test_dialog_bearing_files_are_owner_only
