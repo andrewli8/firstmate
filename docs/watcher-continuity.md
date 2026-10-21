@@ -249,7 +249,8 @@ It uses the `fm_lease_actor` identity owned by `bin/fm-lease-lib.sh`.
 The Pi branch extension injects its branch actor into its own bash tool calls.
 
 Only a main drain begins handling a recovery episode.
-A branch handles only its granted rows, and whoever started its turn already confirmed that close as handling, so a branch drain leaves the marker as it finds it.
+A branch handles only its granted rows, and whoever started its turn already confirmed that close as handling, so a branch drain never moves the recovery episode to handling.
+It may still publish a fresh downtime generation when the marker is missing or acknowledged.
 A close that lands while a branch turn runs therefore stays pending downtime, which is what lets the Claude Stop hook deliver it to an idle main.
 
 ### Claiming rows
