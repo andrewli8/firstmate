@@ -974,8 +974,9 @@ if [ ! -s "$FM_WAKE_QUEUE" ]; then
   : > "$FM_WAKE_QUEUE"
   fm_recovery_marker_snapshot "$RECOVERY_MARKER" || true
   RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
-  case "$RECOVERY_MARKER_TOKEN" in
-    pending:downtime:*|announced:downtime:*)
+  # Only main begins handling the recovery episode (see the second site below).
+  case "$ACTOR:$RECOVERY_MARKER_TOKEN" in
+    main:pending:downtime:*|main:announced:downtime:*)
       fm_recovery_marker_begin_handling "$RECOVERY_MARKER" || {
         echo "wake drain: decision recovery could not begin handling safely" >&2
         exit 1
@@ -983,7 +984,7 @@ if [ ! -s "$FM_WAKE_QUEUE" ]; then
       RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
       RECOVERY_ACK_REQUIRED=true
       ;;
-    pending:handling:*|announced:handling:*) RECOVERY_ACK_REQUIRED=true ;;
+    *:pending:handling:*|*:announced:handling:*) RECOVERY_ACK_REQUIRED=true ;;
   esac
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=false
@@ -1033,11 +1034,16 @@ elif [ "${RECOVERY_MARKER_TOKEN%%:*}" = acked ]; then
     exit 1
   }
 fi
-fm_recovery_marker_begin_handling "$RECOVERY_MARKER" || {
-  echo "wake drain: durable wakes could not begin handling safely" >&2
-  exit 1
-}
-RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
+# Only main begins handling the recovery episode, so a close that lands during
+# a branch turn stays downtime for main (docs/watcher-continuity.md
+# "Per-actor acknowledgement").
+if [ "$ACTOR" = main ]; then
+  fm_recovery_marker_begin_handling "$RECOVERY_MARKER" || {
+    echo "wake drain: durable wakes could not begin handling safely" >&2
+    exit 1
+  }
+  RECOVERY_MARKER_TOKEN=$FM_RECOVERY_MARKER_TOKEN
+fi
 
 DRAIN_VIEW_TMP=$(mktemp "$STATE/.wake-queue.actor-view.XXXXXX") || exit 1
 if [ "$ACTOR" = branch ]; then
